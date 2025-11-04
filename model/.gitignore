@@ -1,0 +1,7 @@
+old/
+slurm*
+*.batch
+.DS_store
+test.py
+*.ipynb
+Untitled.ipynb
