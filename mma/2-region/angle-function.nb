@@ -1,0 +1,86 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Wolfram 14.2' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       154,          7]
+NotebookDataLength[      2497,         78]
+NotebookOptionsPosition[      1896,         59]
+NotebookOutlinePosition[      2324,         76]
+CellTagsIndexPosition[      2281,         73]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"angle", "[", 
+   RowBox[{"a1_", ",", " ", "a2_", ",", " ", "b1_", ",", " ", "b2_"}], "]"}], 
+  ":=", " ", 
+  RowBox[{"ArcCos", "[", 
+   FractionBox[
+    RowBox[{
+     RowBox[{"a1", " ", "*", " ", "b1"}], " ", "+", " ", 
+     RowBox[{"b2", " ", "*", " ", "a2"}]}], 
+    RowBox[{"Sqrt", "[", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{
+        SuperscriptBox["a1", "2"], "+", 
+        SuperscriptBox["a2", "2"]}], ")"}], " ", "*", " ", 
+      RowBox[{"(", 
+       RowBox[{
+        SuperscriptBox["b1", "2"], "+", 
+        SuperscriptBox["b2", "2"]}], ")"}]}], "]"}]], "]"}]}]], "Input",
+ CellChangeTimes->{{3.971370327032992*^9, 3.9713703758372993`*^9}},
+ CellLabel->"In[27]:=",ExpressionUUID->"7b3a7009-192d-40dd-887d-3762a8c89e83"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"angle", "[", 
+   RowBox[{"1.1", ",", " ", "2.0", ",", "  ", "0.7", ",", " ", "0.9"}], "]"}],
+   " ", "*", " ", 
+  RowBox[{"180", "/", "Pi"}]}]], "Input",
+ CellChangeTimes->{{3.971370377605288*^9, 3.971370409915854*^9}},
+ CellLabel->"In[31]:=",ExpressionUUID->"e4ac881f-54d8-4128-be71-ea05a8565886"],
+
+Cell[BoxData["9.064189908125108`"], "Output",
+ CellChangeTimes->{{3.971370383996603*^9, 3.9713704104935093`*^9}},
+ CellLabel->"Out[31]=",ExpressionUUID->"dd274bd9-de63-45fe-933a-7ec12823e65e"]
+}, Open  ]]
+},
+WindowSize->{Full, Full},
+WindowMargins->{{876, Automatic}, {193, Automatic}},
+Magnification:>1.5 Inherited,
+FrontEndVersion->"14.2 for Mac OS X ARM (64-bit) (March 16, 2025)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"15003869-eaba-40b1-80be-9ef6582123f3"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[554, 20, 773, 21, 74, "Input",ExpressionUUID->"7b3a7009-192d-40dd-887d-3762a8c89e83"],
+Cell[CellGroupData[{
+Cell[1352, 45, 333, 7, 44, "Input",ExpressionUUID->"e4ac881f-54d8-4128-be71-ea05a8565886"],
+Cell[1688, 54, 192, 2, 50, "Output",ExpressionUUID->"dd274bd9-de63-45fe-933a-7ec12823e65e"]
+}, Open  ]]
+}
+]
+*)
+

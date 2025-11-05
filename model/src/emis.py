@@ -24,17 +24,21 @@ class EmissionsBaseline():
 
     t_max: int
         maximum time for time series
-
-    WRITE FANCY DOCSTRING ONCE CLASS IS FINALIZED
     """
 
-    def __init__(self, scenario, t_min, t_max):
+    def __init__(self, scenario, t_min, t_max,
+                 geo=False, LEVEL=None, F_EFF_GEO=0.0, T_START=2020):
         self.scenario = scenario
+        self.geo = geo  # whether or not this class should have geoengineering attributes
+        self.LEVEL = LEVEL  # amount of sulfur released per year in Mt SO2 / yr
+        self.F_EFF_GEO = F_EFF_GEO
+        self.T_START = T_START  # year SAI begins
 
         # set time bounds for time series
         self.t_min = int(t_min)
         self.t_max = int(t_max)
         self.times = np.arange(self.t_min, self.t_max, 1)  # time range
+        self.times_ext = np.arange(self.t_min, self.t_max + 1, 1)  # time range
 
         # step 1: import .csv containing emissions data
         self._import_emissions_timeseries()
@@ -47,8 +51,25 @@ class EmissionsBaseline():
         # step 2: parse the big dataframe into individual gas time series
         self._parse_species()
 
+        # step 3: if we care about geoengineering, include those emissions
+        if self.geo:
+            # add sulfur emissions from geoengineering
+            # NOTE: assumed constant for now, but could be time-varying in future
+            geo_emissions = np.zeros_like(self.times_ext)
+            geo_emissions[self.times_ext >= self.T_START] = self.LEVEL
+            self.emis['geo'] = geo_emissions
+            self.forcing['geo'] = - self.F_EFF_GEO * self.emis['geo']
+        
+        else:
+            self.emis['geo'] = np.zeros_like(self.times_ext)  # no geoengineering
+            self.forcing['geo'] = np.zeros_like(self.times_ext)  # no geo
+
         print("\n------------------------------------------------------------------")
         print("Emissions baseline for scenario {} created successfully.".format(self.scenario))
+        if self.geo:
+            print("This scenario has geoengineering beginning in {} with a constant injection of {} MT SO2 per year".format(self.T_START, self.LEVEL))
+        else:
+            print("This scenario does not include geoengineering.")
         print("------------------------------------------------------------------\n")
 
     def _import_emissions_timeseries(self):
@@ -116,6 +137,7 @@ class EmissionsBaseline():
         self.emis = {}
         self.ref_emis = {}
         self.conc = {}
+        self.forcing = {}  # only filled in when self.geo = True above
 
         # loop through emissions gases and make time series
         for i_spec in range(len(self.emis_keywords)):
