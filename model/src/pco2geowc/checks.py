@@ -10,6 +10,7 @@ import os
 import numpy as np
 import pandas as pd
 
+from model import DATA_DIR
 from .dynamics import get_nonlin_path, get_tlm_path
 from .adjoint import get_adj_path
 from .cost import cost, grad
@@ -100,8 +101,7 @@ def get_tlm_check(e, theta, TMIN, TMAX, DT, ALPHA_MIN, ALPHA_MAX,
 
     if SAVE_RESULTS:
         # save output to csv
-        cwd = os.getcwd()
-        datapath = cwd + "/data/checks/pco2geowc/tlm_check.csv"
+        datapath = DATA_DIR + "/data/checks/pco2geowc/tlm_check.csv"
 
         df.to_csv(datapath, sep=',', index=False)
 
@@ -177,8 +177,7 @@ def get_adj_id_check(e, theta, TMIN, TMAX, DT, SAVE_RESULTS=False):
 
     if SAVE_RESULTS:
         # save output to csv
-        cwd = os.getcwd()
-        datapath = cwd + "/data/checks/pco2geowc/adj_id_check.csv"
+        datapath = DATA_DIR + "/data/checks/pco2geowc/adj_id_check.csv"
 
         df.to_csv(datapath, sep=',', index=False)
 
@@ -244,7 +243,7 @@ def get_cost_grad_check(control, cost_args, ALPHA_MIN, ALPHA_MAX,
     if SAVE_RESULTS:
         # save output to csv
         cwd = os.getcwd()
-        datapath = cwd + "/data/checks/pco2geowc/cost_grad_check.csv"
+        datapath = DATA_DIR + "/data/checks/pco2geowc/cost_grad_check.csv"
 
         df.to_csv(datapath, sep=',', index=False)
 

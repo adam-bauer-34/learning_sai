@@ -27,6 +27,7 @@ from src.stats.covar import get_covar_white
 from src.stats.draws import get_prior_draws
 from dask.distributed import Client
 from datatree import DataTree
+from model import DATA_DIR
 
 if __name__ == '__main__':
     # initiate DASK client
@@ -377,9 +378,8 @@ if __name__ == '__main__':
 
     if SAVE_OUTPUT:
         # get current directory and save
-        cwd = os.getcwd()
         sim_type = 'pco2geowc'
-        path = cwd+ '/data/output/' + sim_type\
+        path = globals.DATA_DIR + '/output/' + sim_type\
             + '/margobs_ws_'\
             + SCENARIO + "_"\
             + sim_type + "_"\
