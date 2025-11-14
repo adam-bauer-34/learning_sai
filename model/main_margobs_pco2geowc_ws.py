@@ -17,14 +17,14 @@ import numpy as np
 import xarray as xr
 import dask.bag as db
 
-from src.emis import EmissionsBaseline
-from src.pco2geowc.dynamics import get_nonlin_path
-from src.pco2geowc.checks import *
-from src.pco2geowc.obs import get_obs_from_dynamics
-from src.pco2geowc.parallelization import EnsembleMember, runner_4dvar
-from src.pco2geowc.model_errors import gen_noise_ts
-from src.stats.covar import get_covar_white
-from src.stats.draws import get_prior_draws
+from model.src.emis import EmissionsBaseline
+from model.src.pco2geowc.dynamics import get_nonlin_path
+from model.src.pco2geowc.checks import *
+from model.src.pco2geowc.obs import get_obs_from_dynamics
+from model.src.pco2geowc.parallelization import EnsembleMember, runner_4dvar
+from model.src.pco2geowc.model_errors import gen_noise_ts
+from model.src.stats.covar import get_covar_white
+from model.src.stats.draws import get_prior_draws
 from dask.distributed import Client
 from datatree import DataTree
 from model import DATA_DIR
@@ -379,7 +379,7 @@ if __name__ == '__main__':
     if SAVE_OUTPUT:
         # get current directory and save
         sim_type = 'pco2geowc'
-        path = globals.DATA_DIR + '/output/' + sim_type\
+        path = DATA_DIR + '/output/' + sim_type\
             + '/margobs_ws_'\
             + SCENARIO + "_"\
             + sim_type + "_"\

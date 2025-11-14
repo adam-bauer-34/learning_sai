@@ -101,7 +101,7 @@ def get_tlm_check(e, theta, TMIN, TMAX, DT, ALPHA_MIN, ALPHA_MAX,
 
     if SAVE_RESULTS:
         # save output to csv
-        datapath = DATA_DIR + "/data/checks/pco2geowc/tlm_check.csv"
+        datapath = DATA_DIR + "/checks/pco2geowc/tlm_check.csv"
 
         df.to_csv(datapath, sep=',', index=False)
 
@@ -177,7 +177,7 @@ def get_adj_id_check(e, theta, TMIN, TMAX, DT, SAVE_RESULTS=False):
 
     if SAVE_RESULTS:
         # save output to csv
-        datapath = DATA_DIR + "/data/checks/pco2geowc/adj_id_check.csv"
+        datapath = DATA_DIR + "/checks/pco2geowc/adj_id_check.csv"
 
         df.to_csv(datapath, sep=',', index=False)
 
@@ -243,7 +243,7 @@ def get_cost_grad_check(control, cost_args, ALPHA_MIN, ALPHA_MAX,
     if SAVE_RESULTS:
         # save output to csv
         cwd = os.getcwd()
-        datapath = DATA_DIR + "/data/checks/pco2geowc/cost_grad_check.csv"
+        datapath = DATA_DIR + "/checks/pco2geowc/cost_grad_check.csv"
 
         df.to_csv(datapath, sep=',', index=False)
 

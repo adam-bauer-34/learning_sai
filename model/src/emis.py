@@ -78,8 +78,9 @@ class EmissionsBaseline():
 
         # get current working directory and set path
         cwd = os.getcwd()
-        EMIS_DATA_PATH = cwd + '/data/input/rcmip_emissions_data.csv'
-        CONC_DATA_PATH = cwd + '/data/input/rcmip_conc_data.csv'
+        print(cwd)
+        EMIS_DATA_PATH = cwd + '/model/data/input/rcmip_emissions_data.csv'
+        CONC_DATA_PATH = cwd + '/model/data/input/rcmip_conc_data.csv'
 
         # try to import data. if it doesn't exist, we accept a file not found
         # error, and download the file from Zenodo
