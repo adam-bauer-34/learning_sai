@@ -1,7 +1,7 @@
 old/
 slurm*
 *.batch
-.DS_store
+.DS_stores
 test.py
 *.ipynb
 old_mains/
