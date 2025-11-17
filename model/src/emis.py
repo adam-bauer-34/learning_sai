@@ -27,12 +27,16 @@ class EmissionsBaseline():
     """
 
     def __init__(self, scenario, t_min, t_max,
-                 geo=False, LEVEL=None, F_EFF_GEO=0.0, T_START=2020):
+                 geo=False, DEG_PER_DEC=0.1, LAMBDA=1.0, F_EFF_GEO=0.0,
+                 T_START=2020, T_END=2070):
         self.scenario = scenario
         self.geo = geo  # whether or not this class should have geoengineering attributes
-        self.LEVEL = LEVEL  # amount of sulfur released per year in Mt SO2 / yr
+        self.DEG_PER_DEC = DEG_PER_DEC  # degrees C offset by geo per decade
+        self.LAMBDA = LAMBDA  # climate feedback parameter, used to determine SAI rate
         self.F_EFF_GEO = F_EFF_GEO
-        self.T_START = T_START  # year SAI begins
+        self.T_START = int(T_START)  # year SAI begins
+        self.T_END = int(T_END)  # year SAI levels out
+        self.TOTAL_TEMP_OFFSET = self.DEG_PER_DEC * (self.T_END - self.T_START) / 10.  # total temperature offset for geo program
 
         # set time bounds for time series
         self.t_min = int(t_min)
@@ -53,12 +57,7 @@ class EmissionsBaseline():
 
         # step 3: if we care about geoengineering, include those emissions
         if self.geo:
-            # add sulfur emissions from geoengineering
-            # NOTE: assumed constant for now, but could be time-varying in future
-            geo_emissions = np.zeros_like(self.times_ext)
-            geo_emissions[self.times_ext >= self.T_START] = self.LEVEL
-            self.emis['geo'] = geo_emissions
-            self.forcing['geo'] = - self.F_EFF_GEO * self.emis['geo']
+            self._make_geo_time_series()
         
         else:
             self.emis['geo'] = np.zeros_like(self.times_ext)  # no geoengineering
@@ -67,7 +66,7 @@ class EmissionsBaseline():
         print("\n------------------------------------------------------------------")
         print("Emissions baseline for scenario {} created successfully.".format(self.scenario))
         if self.geo:
-            print("This scenario has geoengineering beginning in {} with a constant injection of {} MT SO2 per year".format(self.T_START, self.LEVEL))
+            print("This scenario has geoengineering beginning in {} that offsets {} deg C per decade".format(self.T_START, self.DEG_PER_DEC))
         else:
             print("This scenario does not include geoengineering.")
         print("------------------------------------------------------------------\n")
@@ -78,7 +77,6 @@ class EmissionsBaseline():
 
         # get current working directory and set path
         cwd = os.getcwd()
-        print(cwd)
         EMIS_DATA_PATH = cwd + '/model/data/input/rcmip_emissions_data.csv'
         CONC_DATA_PATH = cwd + '/model/data/input/rcmip_conc_data.csv'
 
@@ -197,3 +195,65 @@ class EmissionsBaseline():
 
             # save to dictionary of species
             self.conc[tmp_spec_trunc] = tmp_df_vals
+
+    def _make_geo_time_series(self):
+        # add sulfur emissions from geoengineering
+        # times where geoengineering is ramped up
+        geo_ramp_up_times = self.times_ext[(self.times_ext >= self.T_START) 
+                                            & (self.times_ext < self.T_END)]
+        # times where SAI is held constant 
+        geo_constant_times = self.times_ext[self.times_ext >= self.T_END]
+        
+        # make SAI ramp up 
+        geo_ramp = (self.TOTAL_TEMP_OFFSET * self.LAMBDA / self.F_EFF_GEO) * (
+            (geo_ramp_up_times - self.t_min) / (self.t_max - self.t_min)
+            )
+        
+        # set remaining years of SAI to final t levels
+        geo_constant = np.ones(len(geo_constant_times), dtype=float) * geo_ramp[-1]
+        
+        # stack the arrays together and store in class attributes
+        geo_emissions = np.hstack([geo_ramp, geo_constant])
+        self.emis['geo'] = geo_emissions
+        self.forcing['geo'] = - self.F_EFF_GEO * self.emis['geo']
+
+if __name__ == '__main__':
+    # small test script to verify geoengineering forcing is being generated
+    # correctly
+    import matplotlib.pyplot as plt
+    plt.style.use('ambpy')
+
+    scenario = 'ssp245'
+    t_min = 2020
+    t_max = 2100
+    geo = True
+    degs_per_dec = [0.0, 0.05, 0.1, 0.2]
+    LAM = 1.28
+    F_EFF_GEO = 0.09
+    ts = 2020
+    tf = 2070
+    geo_ts_emis = []
+    geo_ts_force = []
+
+    for deg in degs_per_dec:
+        e = EmissionsBaseline(scenario, t_min, t_max,
+                    geo=geo, DEG_PER_DEC=deg, LAMBDA=LAM, F_EFF_GEO=F_EFF_GEO,
+                    T_START=ts, T_END=tf)
+        geo_ts_emis.append(e.emis['geo'])
+        geo_ts_force.append(e.forcing['geo'])
+
+    fig, ax = plt.subplots(1, 2, figsize=(14, 6))
+
+    for i in range(len(degs_per_dec)):
+        ax[0].plot(e.times_ext, geo_ts_emis[i], label=str(degs_per_dec[i]) + ' deg C per decade')
+        ax[1].plot(e.times_ext, geo_ts_force[i], label=str(degs_per_dec[i]) + ' deg C per decade')
+
+    ax[0].set_ylabel("Emissions (MtSO$_2$)")
+    ax[1].set_ylabel("Forcing (W m$^{-2}$)")
+
+    ax[1].legend()
+    
+    figpath = 'analysis/figs/checks/geo_emis.png'
+    fig.savefig(figpath, dpi=400)
+    print("Emissions baseline check figure saved to:\n {}".format(figpath))
+

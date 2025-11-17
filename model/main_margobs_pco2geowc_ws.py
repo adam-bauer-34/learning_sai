@@ -38,10 +38,11 @@ if __name__ == '__main__':
     SCENARIO = sys.argv[1]
     TMIN = int(sys.argv[2])
     AR_P = int(sys.argv[3])
-    GEO_LEVEL = float(sys.argv[4])
-    N_windows = int(sys.argv[5])
-    N_ENS = int(sys.argv[6])
-    SAVE_OUTPUT = int(sys.argv[7])
+    DEG_PER_DEC = float(sys.argv[4])
+    N_YEARS_RAMP = int(sys.argv[5])
+    N_windows = int(sys.argv[6])
+    N_ENS = int(sys.argv[7])
+    SAVE_OUTPUT = int(sys.argv[8])
 
     # turn on if you want to test the TLM and ADJ
     CHECK_TLM = True
@@ -84,7 +85,7 @@ if __name__ == '__main__':
     # or treated as known
     ANGLE_TR = np.arccos(ALPHA_R1_TR * BETA_R1_TR + ALPHA_R2_TR * BETA_R2_TR
                          / np.sqrt((ALPHA_R1_TR**2 + ALPHA_R2_TR**2)
-                                   * (BETA_R1_TR**2 + BETA_R2_TR**2))) * 180/np.pi  # angle between impact vectors
+                                   * (BETA_R1_TR**2 + BETA_R2_TR**2))) * 180 / np.pi  # angle between impact vectors
     F_EFF_GEO_TR = 0.09  # W / m2 per TgS / yr of geoengineering (forcing efficacy)
     ECS_TR = F1_CO2_TR * np.log(2) / L_TR  # equilibrium climate sensitivity
     INT_VAR_STD = 0.27  # internal variability standard deviation from Proistosescu and Huybers, Sci Adv, 2017
@@ -134,6 +135,8 @@ if __name__ == '__main__':
     print("Simulation attributes:")
     print("------------------------------------------------------------------")
     print("Socio-economic pathway: {}".format(SCENARIO))
+    print("Temperature offset by SAI per decade: {} deg C".format(DEG_PER_DEC))
+    print("The SAI ramp-up occurs over {} years".format(N_YEARS_RAMP))
     print("The initial time is: {}".format(TMIN))
     print("Temperature is forced with AR({}) noise.".format(AR_P))
     print("ECS = {}.".format(ECS_TR))
@@ -154,8 +157,10 @@ if __name__ == '__main__':
         np.random.seed(1000)
 
         # make emissions baseline
-        e = EmissionsBaseline(SCENARIO, TMIN, TMAX, geo=True, LEVEL=GEO_LEVEL,
-                              F_EFF_GEO=F_EFF_GEO_TR, T_START=TMIN)
+        e = EmissionsBaseline(SCENARIO, TMIN, TMAX,
+                              geo=True, DEG_PER_DEC=DEG_PER_DEC,
+                              LAMBDA=L_CEN, F_EFF_GEO=F_EFF_GEO_TR,
+                              T_START=TMIN, T_END=TMIN + N_YEARS_RAMP)
 
         # make model errors and their covariance matrix
         mod_errors, mod_error_covar = gen_noise_ts(AR_P, len(e.conc['CO2']),
@@ -385,7 +390,8 @@ if __name__ == '__main__':
             + sim_type + "_"\
             + "TMIN" + str(TMIN) + "_"\
             + "AR" + str(AR_P) + "_"\
-            + "GEOLEVEL" + str(GEO_LEVEL) + "_"\
+            + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
+            + "NYRSRAMP" + str(N_YEARS_RAMP) + "_"\
             + "Nwinds" + str(N_windows) + "_"\
             + "Nens" + str(N_ENS) + ".nc"
         dt.to_netcdf(filepath=path, mode='w', format='NETCDF4',
