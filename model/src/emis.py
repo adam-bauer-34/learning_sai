@@ -221,6 +221,7 @@ if __name__ == '__main__':
     # small test script to verify geoengineering forcing is being generated
     # correctly
     import matplotlib.pyplot as plt
+    from model.globals import FIGS_DIR
     plt.style.use('ambpy')
 
     scenario = 'ssp245'
@@ -253,7 +254,7 @@ if __name__ == '__main__':
 
     ax[1].legend()
     
-    figpath = 'analysis/figs/checks/geo_emis.png'
+    figpath = FIGS_DIR + 'checks/geo_emis.png'
     fig.savefig(figpath, dpi=400)
     print("Emissions baseline check figure saved to:\n {}".format(figpath))
 
