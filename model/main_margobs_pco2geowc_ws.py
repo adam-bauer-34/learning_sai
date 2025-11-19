@@ -322,6 +322,7 @@ if __name__ == '__main__':
         # map and compute
         opt_ensmems = bag_ens.compute()
         t1 = time.time()
+        print(t1 - t0)
         print("Done!")
 
         print("Processing output...")
