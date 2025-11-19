@@ -222,7 +222,7 @@ if __name__ == '__main__':
     # correctly
     import matplotlib.pyplot as plt
     from model.globals import FIGS_DIR
-    plt.style.use('ambpy')
+    # plt.style.use('ambpy')
 
     scenario = 'ssp245'
     t_min = 2020

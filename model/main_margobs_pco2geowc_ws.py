@@ -12,6 +12,7 @@ To run:
 import sys
 import os
 import time
+import warnings 
 
 import numpy as np
 import xarray as xr
@@ -45,8 +46,12 @@ if __name__ == '__main__':
     SAVE_OUTPUT = int(sys.argv[8])
 
     # turn on if you want to test the TLM and ADJ
-    CHECK_TLM = True
-    CHECK_ADJ = True
+    CHECK_TLM = False
+    CHECK_ADJ = False
+
+    # filter out runtime warnings which clog log files
+    # (they are natural in the scipy.minimize call)
+    warnings.filterwarnings("ignore", category=RuntimeWarning)
 
     # ----------------------------------------
     # Initialize the problem
@@ -67,7 +72,7 @@ if __name__ == '__main__':
     ALPHA_R1_CEN = 1.1  # region 1 pattern scaling parameter (global T)
     ALPHA_R2_CEN = 2.0  # region 2 pattern scaling parameter (global T)
     BETA_R1_CEN = 0.7  # region 1 pattern scaling parameter (geoengeineering)
-    BETA_R2_CEN = 0.9  # region 2 pattern scaling parameter (geoengineering)
+    BETA_R2_CEN = 0.7  # region 2 pattern scaling parameter (geoengineering)
 
     # true parameters used to make observations
     L_TR = 1.06  # sensitivity
@@ -78,12 +83,12 @@ if __name__ == '__main__':
     EPS_TR = 1.58  # pattern effect
     ALPHA_R1_TR = 1.1  # region 1 pattern scaling parameter (global T)
     ALPHA_R2_TR = 2.0  # region 2 pattern scaling parameter (global T)
-    BETA_R1_TR = 0.3  # region 1 pattern scaling parameter (geoengeineering)
-    BETA_R2_TR = 0.1  # region 2 pattern scaling parameter (geoengineering)
+    BETA_R1_TR = 0.7  # region 1 pattern scaling parameter (geoengeineering)
+    BETA_R2_TR = 0.4239  # region 2 pattern scaling parameter (geoengineering)
     
     # other parameters of interest that are either diagnostic (i.e., are functions of other things)
     # or treated as known
-    ANGLE_TR = np.arccos(ALPHA_R1_TR * BETA_R1_TR + ALPHA_R2_TR * BETA_R2_TR
+    ANGLE_TR = np.arccos((ALPHA_R1_TR * BETA_R1_TR + ALPHA_R2_TR * BETA_R2_TR)
                          / np.sqrt((ALPHA_R1_TR**2 + ALPHA_R2_TR**2)
                                    * (BETA_R1_TR**2 + BETA_R2_TR**2))) * 180 / np.pi  # angle between impact vectors
     F_EFF_GEO_TR = 0.09  # W / m2 per TgS / yr of geoengineering (forcing efficacy)
@@ -308,7 +313,7 @@ if __name__ == '__main__':
 
         # do dask evaluation of runner
         print("Solving 4DVAR using DASK...")
-        part_size = 20  # twenty members per thread in Dask
+        part_size = int(N_ENS / 10)  # twenty members per thread in Dask
 
         # make dask bag for evaluation
         bag_ens = db.from_sequence(ensemble_members,
@@ -385,7 +390,7 @@ if __name__ == '__main__':
         # get current directory and save
         sim_type = 'pco2geowc'
         path = DATA_DIR + '/output/' + sim_type\
-            + '/margobs_ws_'\
+            + '/margobs_ws_angle10_'\
             + SCENARIO + "_"\
             + sim_type + "_"\
             + "TMIN" + str(TMIN) + "_"\

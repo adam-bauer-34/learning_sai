@@ -1,0 +1,21 @@
+Job ID: 
+Job name: 
+N tasks: 
+N cores: 
+N threads per code: 
+Minimum memory required per CPU: 
+Requested memory per GPU: 
+Job ID: 
+Job name: 
+N tasks: 
+N cores: 
+N threads per code: 
+Minimum memory required per CPU: 
+Requested memory per GPU: 
+Job ID: 
+Job name: 
+N tasks: 
+N cores: 
+N threads per code: 
+Minimum memory required per CPU: 
+Requested memory per GPU: 

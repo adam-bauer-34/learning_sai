@@ -5,12 +5,17 @@ University of Illinois Urbana-Champaign
 7.15.2024
 """
 
+import warnings
+
 import numpy as np
 
 from .dynamics import get_nonlin_path
 from .adjoint import get_adj_path
 from .obs import get_obs_from_dynamics
 
+# filter out RuntimeWarning because they clog the log files
+# and don't impact the results
+warnings.filterwarnings('ignore', category=RuntimeWarning)
 
 def cost(control, args):
     """Cost function for 4DVAR.

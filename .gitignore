@@ -1,3 +1,5 @@
 cmip6_data/
+.env/
+logs/
 __pycache__/
 .DS_Store

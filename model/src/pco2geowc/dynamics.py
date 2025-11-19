@@ -5,8 +5,14 @@ University of Illinois Urbana-Champaign
 7.10.2024
 """
 
+import warnings
+
 import numpy as np
 
+# filter out overflow errors that happen during optimization
+# (they never impact the answer)
+warnings.filterwarnings('ignore',
+        category=RuntimeWarning)
 
 def get_nonlin_path(e, theta, TMIN, TMAX, DT):
     """Get nonlinear path for our model.
