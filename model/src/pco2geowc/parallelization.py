@@ -49,7 +49,7 @@ class EnsembleMember():
         self.controls_hist[:, 0] = theta_p
 
 
-def runner_4dvar(mem):
+def runner_4dvar(mem, e):
     """4DVAR "runner" function.
 
     This function is designed to be used in tandem with Dask to parallelize the

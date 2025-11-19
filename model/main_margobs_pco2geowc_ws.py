@@ -163,9 +163,6 @@ if __name__ == '__main__':
                               geo=True, DEG_PER_DEC=DEG_PER_DEC,
                               LAMBDA=L_CEN, F_EFF_GEO=F_EFF_GEO_TR,
                               T_START=TMIN, T_END=TMIN + N_YEARS_RAMP)
-        
-        # scatter emissions baseline class to each 
-        e_scat = c.scatter(e, broadcast=True)
 
         # make model errors and their covariance matrix
         mod_errors, mod_error_covar = gen_noise_ts(AR_P, len(e.conc['CO2']),
@@ -299,11 +296,15 @@ if __name__ == '__main__':
                                       np.linalg.inv(inv_covar_prior),
                                       N_ENS)
         
-        """Check on object sizes
+        # Check on object sizes
         from pympler import asizeof
-        print("emissions object is:")
-        print(sys.getsizeof(e))
-        print(asizeof.asizeof(e) / 1e6)"""
+        #print("emissions object is:")
+        #print(sys.getsizeof(e))
+        print(asizeof.asizeof(e) / 1e6)
+
+        # scatter emissions baseline class and true observations to each
+        # dask worker 
+        e_scat = c.scatter(e, broadcast=True)
 
         # make list of ensemble members
         ensemble_members = [EnsembleMember(theta_p,
@@ -314,8 +315,8 @@ if __name__ == '__main__':
                                            inv_covar_T_R2_obs, obs, times)
                             for theta_p in theta_prior]
         
-        #for i, e in enumerate(ensemble_members):
-        #    print(i, asizeof.asizeof(e) / 1e6, " MB")
+        for i, ee in enumerate(ensemble_members):
+            print(i, asizeof.asizeof(ee) / 1e6, " MB")
 
         # solve the assimilation using dask
         t0 = time.time()
