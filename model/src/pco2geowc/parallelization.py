@@ -16,7 +16,7 @@ class EnsembleMember():
     """4DVAR Ensemble Member Class.
     """
 
-    def __init__(self, theta_p, flag, tol, max_iter, e, TMIN, TMAX, DT,
+    def __init__(self, theta_p, flag, tol, max_iter, TMIN, TMAX, DT,
                  theta_tr, inv_covar_prior, inv_covar_T1_obs, inv_covar_Q_obs,
                  inv_covar_T_R1_obs, inv_covar_T_R2_obs,
                  obs, times):
@@ -26,7 +26,6 @@ class EnsembleMember():
         self.flag = flag
         self.tol = tol
         self.max_iter = max_iter
-        self.e = e
         self.TMIN = TMIN
         self.TMAX = TMAX
         self.DT = DT
@@ -60,6 +59,9 @@ def runner_4dvar(mem):
     ----------
     mem: `EnsembleMember` class
         ensemble member class
+    
+    e: `EmissionsBaseline` class
+        contains emissions information that is shared among Dask workers
 
     Returns
     -------
@@ -77,7 +79,7 @@ def runner_4dvar(mem):
     iter_ = 1
 
     # get prior paths
-    prior_p, _ = get_nonlin_path(mem.e,
+    prior_p, _ = get_nonlin_path(e,
                                  mem.theta_p,
                                  mem.TMIN,
                                  mem.TMAX,
@@ -95,7 +97,7 @@ def runner_4dvar(mem):
                     mem.inv_covar_T_R1_obs,
                     mem.inv_covar_T_R2_obs,
                     mem.obs,
-                    mem.e,
+                    e,
                     mem.TMIN,
                     mem.TMAX,
                     mem.DT])
@@ -120,7 +122,7 @@ def runner_4dvar(mem):
                              mem.inv_covar_T_R1_obs,
                              mem.inv_covar_T_R2_obs,
                              mem.obs,
-                             mem.e,
+                             e,
                              mem.TMIN,
                              mem.TMAX,
                              mem.DT],
@@ -141,7 +143,7 @@ def runner_4dvar(mem):
         mem.l2s_hist[iter_] = mem.l2
 
         # store new trajectory in the data history
-        new_p, _ = get_nonlin_path(mem.e, new_theta,
+        new_p, _ = get_nonlin_path(e, new_theta,
                                    mem.TMIN, mem.TMAX, mem.DT)
         mem.data_hist[:, iter_] = new_p
 

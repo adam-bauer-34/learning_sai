@@ -133,9 +133,6 @@ if __name__ == '__main__':
     
     print("Warm start complete!")
 
-    print(T1_TR, T2_TR, Q_TR, T_R1_TR, T_R2_TR)
-
-
     print("==================================================================")
     print("Simulation attributes:")
     print("------------------------------------------------------------------")
@@ -166,6 +163,9 @@ if __name__ == '__main__':
                               geo=True, DEG_PER_DEC=DEG_PER_DEC,
                               LAMBDA=L_CEN, F_EFF_GEO=F_EFF_GEO_TR,
                               T_START=TMIN, T_END=TMIN + N_YEARS_RAMP)
+        
+        # scatter emissions baseline class to each 
+        e_scat = c.scatter(e, broadcast=True)
 
         # make model errors and their covariance matrix
         mod_errors, mod_error_covar = gen_noise_ts(AR_P, len(e.conc['CO2']),
@@ -298,30 +298,46 @@ if __name__ == '__main__':
         theta_prior = get_prior_draws(theta_prior_cent,
                                       np.linalg.inv(inv_covar_prior),
                                       N_ENS)
+        
+        """Check on object sizes
+        from pympler import asizeof
+        print("emissions object is:")
+        print(sys.getsizeof(e))
+        print(asizeof.asizeof(e) / 1e6)"""
 
         # make list of ensemble members
         ensemble_members = [EnsembleMember(theta_p,
                                            -1, tol, max_iter,
-                                           e, TMIN, TMAX, DT, theta_tr,
+                                           TMIN, TMAX, DT, theta_tr,
                                            inv_covar_prior, inv_covar_T1_obs,
                                            inv_covar_Q_obs, inv_covar_T_R1_obs,
                                            inv_covar_T_R2_obs, obs, times)
                             for theta_p in theta_prior]
+        
+        #for i, e in enumerate(ensemble_members):
+        #    print(i, asizeof.asizeof(e) / 1e6, " MB")
 
         # solve the assimilation using dask
         t0 = time.time()
 
         # do dask evaluation of runner
         print("Solving 4DVAR using DASK...")
-        part_size = int(N_ENS / 10)  # twenty members per thread in Dask
+        #part_size = int(N_ENS / 10)  # twenty members per thread in Dask
 
         # make dask bag for evaluation
-        bag_ens = db.from_sequence(ensemble_members,
-                                   partition_size=part_size).map(runner_4dvar)
+        #bag_ens = db.from_sequence(ensemble_members,
+        #                           partition_size=part_size).map(runner_4dvar)
 
         # map and compute
-        opt_ensmems = bag_ens.compute()
+        #opt_ensmems = bag_ens.compute()
+        futures = [c.submit(runner_4dvar, m, e_scat)
+                   for m in ensemble_members]
+        
+        opt_ensmems = c.gather(futures)
+
+
         t1 = time.time()
+        print(t1 - t0)
         print("Done!")
 
         print("Processing output...")
