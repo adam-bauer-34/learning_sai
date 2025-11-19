@@ -30,6 +30,9 @@ from dask.distributed import Client
 from datatree import DataTree
 from model import DATA_DIR
 
+# from pympler import asizeof  # optional, include if needed / debugging
+
+
 if __name__ == '__main__':
     # initiate DASK client
     c = Client()
@@ -132,9 +135,6 @@ if __name__ == '__main__':
     T_R2_CEN = ALPHA_R2_CEN * T1_CEN  # central estimate, temperature in region 2
     
     print("Warm start complete!")
-
-    print(T1_TR, T2_TR, Q_TR, T_R1_TR, T_R2_TR)
-
 
     print("==================================================================")
     print("Simulation attributes:")
@@ -298,29 +298,41 @@ if __name__ == '__main__':
         theta_prior = get_prior_draws(theta_prior_cent,
                                       np.linalg.inv(inv_covar_prior),
                                       N_ENS)
+        
+        # Check on object sizes
+        #print("emissions object is:")
+        #print(sys.getsizeof(e))
+        #print(asizeof.asizeof(e) / 1e6)
+
+        # scatter emissions baseline class and true observations to each
+        # dask worker 
+        e_scat = c.scatter(e, broadcast=True)
 
         # make list of ensemble members
         ensemble_members = [EnsembleMember(theta_p,
                                            -1, tol, max_iter,
-                                           e, TMIN, TMAX, DT, theta_tr,
+                                           TMIN, TMAX, DT, theta_tr,
                                            inv_covar_prior, inv_covar_T1_obs,
                                            inv_covar_Q_obs, inv_covar_T_R1_obs,
                                            inv_covar_T_R2_obs, obs, times)
                             for theta_p in theta_prior]
+        
+        #for i, ee in enumerate(ensemble_members):
+        #    print(i, asizeof.asizeof(ee) / 1e6, " MB")
 
         # solve the assimilation using dask
         t0 = time.time()
 
         # do dask evaluation of runner
         print("Solving 4DVAR using DASK...")
-        part_size = int(N_ENS / 10)  # twenty members per thread in Dask
-
-        # make dask bag for evaluation
-        bag_ens = db.from_sequence(ensemble_members,
-                                   partition_size=part_size).map(runner_4dvar)
 
         # map and compute
-        opt_ensmems = bag_ens.compute()
+        futures = [c.submit(runner_4dvar, m, e_scat)
+                   for m in ensemble_members]
+        
+        # gather results
+        opt_ensmems = c.gather(futures)
+
         t1 = time.time()
         print(t1 - t0)
         print("Done!")
