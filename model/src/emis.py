@@ -206,7 +206,7 @@ class EmissionsBaseline():
         
         # make SAI ramp up 
         geo_ramp = (self.TOTAL_TEMP_OFFSET * self.LAMBDA / self.F_EFF_GEO) * (
-            (geo_ramp_up_times - self.t_min) / (self.t_max - self.t_min)
+            (geo_ramp_up_times - self.T_START) / (self.T_END - self.T_START)
             )
         
         # set remaining years of SAI to final t levels
@@ -222,7 +222,7 @@ if __name__ == '__main__':
     # correctly
     import matplotlib.pyplot as plt
     from model.globals import FIGS_DIR
-    # plt.style.use('ambpy')
+    plt.style.use('ambpy')
 
     scenario = 'ssp245'
     t_min = 2020
