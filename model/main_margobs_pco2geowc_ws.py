@@ -122,8 +122,6 @@ if __name__ == '__main__':
     BETA_R1_TR = XI_R1_TR * ALPHA_R1_CEN * F_EFF_GEO_TR / L_CEN  # region 1 pattern scaling parameter (geoengeineering)
     BETA_R2_TR = XI_R2_TR * ALPHA_R2_CEN * F_EFF_GEO_TR / L_CEN  # region 1 pattern scaling parameter (geoengeineering)
 
-    print(BETA_R1_TR, BETA_R2_TR)
-    
     """WARM START MODULE.
     """
     print("Warm starting model to get initial conditions for temperature, ocean heat content, and regional temperature...")
@@ -362,7 +360,7 @@ if __name__ == '__main__':
         opt_ensmems = c.gather(futures)
 
         t1 = time.time()
-        print(t1 - t0)
+        # print(t1 - t0)
         print("Done!")
 
         print("Processing output...")
