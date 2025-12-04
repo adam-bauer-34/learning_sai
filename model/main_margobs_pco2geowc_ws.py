@@ -48,9 +48,10 @@ if __name__ == '__main__':
     N_ENS = int(sys.argv[8])
     SAVE_OUTPUT = int(sys.argv[9])
 
-    # turn on if you want to test the TLM and ADJ
-    CHECK_TLM = False
-    CHECK_ADJ = False
+    # binary variables that are pre-set
+    CHECK_TLM = False  # check the tangent linear model?
+    CHECK_ADJ = False  # check the adjoint model and the cost function gradient?
+    MANUAL_WINDOWING = True  # set assimilation windows manually?
 
     # filter out runtime warnings which clog log files
     # (they are natural in the scipy.minimize call)
@@ -63,7 +64,13 @@ if __name__ == '__main__':
     DT = 1.0
 
     # make set of assimilation windows
-    tmax_assims = np.linspace(TMIN, 2100, N_windows, dtype=int)[1:]
+    if not MANUAL_WINDOWING:
+        tmax_assims = np.linspace(TMIN, 2100, N_windows, dtype=int)[1:]
+    
+    else:
+        #fine = np.arange(TMIN, 2050, 2)  # fine grained early on
+        #tmax_assims = np.hstack([fine, [2075, 2100]])  # add two larger ones later
+        tmax_assims = np.array([2050])
 
     # GLOBAL ENERGY BALANCE MODEL PARAMETERS
     # central values of priors on global parameters
@@ -85,7 +92,6 @@ if __name__ == '__main__':
     F_EFF_GEO_TR = 0.09  # W / m2 per TgS / yr of geoengineering (forcing efficacy)
     ECS_TR = F1_CO2_TR * np.log(2) / L_TR  # equilibrium climate sensitivity
     INT_VAR_STD = 0.27  # internal variability standard deviation from Proistosescu and Huybers, Sci Adv, 2017
-
 
     # REGIONAL PATTERN SCALING MODEL PARAMETERS
     # central value and standard deviations of regional variables
@@ -115,6 +121,8 @@ if __name__ == '__main__':
     XI_R2_TR = df.XI_R2_TR[THETA]  # region 2 calibration parameter
     BETA_R1_TR = XI_R1_TR * ALPHA_R1_CEN * F_EFF_GEO_TR / L_CEN  # region 1 pattern scaling parameter (geoengeineering)
     BETA_R2_TR = XI_R2_TR * ALPHA_R2_CEN * F_EFF_GEO_TR / L_CEN  # region 1 pattern scaling parameter (geoengeineering)
+
+    print(BETA_R1_TR, BETA_R2_TR)
     
     """WARM START MODULE.
     """
@@ -163,8 +171,11 @@ if __name__ == '__main__':
     print("The initial time is: {}".format(TMIN))
     print("Temperature is forced with AR({}) noise.".format(AR_P))
     print("ECS = {}.".format(ECS_TR))
-    print("The angle is {} degrees between temperature and geoengineering.".format(ANGLE_TR))
-    print("There are {} assimilation windows, starting in {} and ending in 2100 (this implies adding one window adds {} years of observations).".format(N_windows - 1, TMIN, (2100 - TMIN)/len(tmax_assims)))
+    print("The angle is {} degrees between temperature and geoengineering.".format(THETA))
+    if not MANUAL_WINDOWING:
+        print("There are {} assimilation windows, starting in {} and ending in 2100 (this implies adding one window adds {} years of observations).".format(N_windows - 1, TMIN, (2100 - TMIN)/len(tmax_assims)))
+    else:
+        print("There are {} assimilation windows, which are {}.".format(len(tmax_assims), tmax_assims))
     print("The 4DVAR ensemble has {} members.".format(N_ENS))
     print("==================================================================")
 
@@ -410,6 +421,9 @@ if __name__ == '__main__':
                                'run_time': t1 - t0,
                                'ECS': ECS_TR,
                                'ANGLE': THETA,
+                               'xi_r1_tr': XI_R1_TR,
+                               'xi_r2_tr': XI_R2_TR,
+                               'assim_tmax': tmax_assims,
                                'internal_variability_std': INT_VAR_STD})
 
         datatree_dict[str(TMAX)] = ds
@@ -419,17 +433,31 @@ if __name__ == '__main__':
     if SAVE_OUTPUT:
         # get current directory and save
         sim_type = 'pco2geowc'
-        path = DATA_DIR + '/output/' + sim_type\
-            + '/margobs_ws_'\
-            + SCENARIO + "_"\
-            + sim_type + "_"\
-            + "TMIN" + str(TMIN) + "_"\
-            + "AR" + str(AR_P) + "_"\
-            + "THETA" + str(THETA) + "_"\
-            + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
-            + "NYRSRAMP" + str(N_YEARS_RAMP) + "_"\
-            + "Nwinds" + str(N_windows) + "_"\
-            + "Nens" + str(N_ENS) + ".nc"
+        if not MANUAL_WINDOWING:
+            path = DATA_DIR + '/output/' + sim_type\
+                + '/margobs_ws_'\
+                + SCENARIO + "_"\
+                + sim_type + "_"\
+                + "TMIN" + str(TMIN) + "_"\
+                + "AR" + str(AR_P) + "_"\
+                + "THETA" + str(THETA) + "_"\
+                + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
+                + "NYRSRAMP" + str(N_YEARS_RAMP) + "_"\
+                + "Nwinds" + str(N_windows) + "_"\
+                + "Nens" + str(N_ENS) + ".nc"
+        else:
+            path = DATA_DIR + '/output/' + sim_type\
+                + '/margobs_ws_'\
+                + SCENARIO + "_"\
+                + sim_type + "_"\
+                + "TMIN" + str(TMIN) + "_"\
+                + "AR" + str(AR_P) + "_"\
+                + "THETA" + str(THETA) + "_"\
+                + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
+                + "NYRSRAMP" + str(N_YEARS_RAMP) + "_"\
+                + "Nwinds" + str(len(tmax_assims)) + "custom_"\
+                + "Nens" + str(N_ENS) + ".nc"  
+            
         dt.to_netcdf(filepath=path, mode='w', format='NETCDF4',
                      engine='netcdf4')
 
