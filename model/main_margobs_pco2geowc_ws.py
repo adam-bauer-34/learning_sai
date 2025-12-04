@@ -42,11 +42,16 @@ if __name__ == '__main__':
     TMIN = int(sys.argv[2])
     AR_P = int(sys.argv[3])
     THETA = int(sys.argv[4])
-    DEG_PER_DEC = float(sys.argv[5])
-    N_YEARS_RAMP = int(sys.argv[6])
-    N_windows = int(sys.argv[7])
-    N_ENS = int(sys.argv[8])
-    SAVE_OUTPUT = int(sys.argv[9])
+    ECS_TR = float(sys.argv[5])
+    DEG_PER_DEC = float(sys.argv[6])
+    N_YEARS_RAMP = int(sys.argv[7])
+    N_windows = int(sys.argv[8])
+    N_ENS = int(sys.argv[9])
+    SAVE_OUTPUT = int(sys.argv[10])
+
+    # raise ECS warning
+    if ECS_TR != 3.0:
+        print("WARNING: Chaning ECS changes the global climate feedback, \lambda, not forcing sensitivity to CO2 concentrations.")
 
     # binary variables that are pre-set
     CHECK_TLM = False  # check the tangent linear model?
@@ -74,15 +79,16 @@ if __name__ == '__main__':
 
     # GLOBAL ENERGY BALANCE MODEL PARAMETERS
     # central values of priors on global parameters
-    L_CEN = 1.06  # overall climate sensitivity
+    ECS_CEN = 3.0  # central value of equilibrium climate sensitivity
     G_CEN = 0.7  # layer transfer coefficient
     C1_CEN = 8  # heat capacity of surface layer
     C2_CEN = 100  # heat capacity of ocean layer
     F1_CO2_CEN = 4.58  # forcing from log term in CO2
+    L_CEN = F1_CO2_CEN * np.log(2) / ECS_CEN  # central value of climate feedback
     EPS_CEN = 1.58  # pattern effect
 
     # true parameters used to make observations
-    L_TR = 1.06  # sensitivity
+    L_TR = F1_CO2_CEN * np.log(2) / ECS_TR  # sensitivity
     G_TR = 0.7  # layer transfer coefficient
     C1_TR = 8  # heat capacity of surface layer
     C2_TR = 100  # heat capacity of ocean layer
@@ -90,7 +96,6 @@ if __name__ == '__main__':
     EPS_TR = 1.58  # pattern effect
 
     F_EFF_GEO_TR = 0.09  # W / m2 per TgS / yr of geoengineering (forcing efficacy)
-    ECS_TR = F1_CO2_TR * np.log(2) / L_TR  # equilibrium climate sensitivity
     INT_VAR_STD = 0.27  # internal variability standard deviation from Proistosescu and Huybers, Sci Adv, 2017
 
     # REGIONAL PATTERN SCALING MODEL PARAMETERS
