@@ -16,7 +16,6 @@ import warnings
 
 import numpy as np
 import xarray as xr
-import dask.bag as db
 
 from model.src.emis import EmissionsBaseline
 from model.src.pco2geowc.dynamics import get_nonlin_path
@@ -42,15 +41,17 @@ if __name__ == '__main__':
     SCENARIO = sys.argv[1]
     TMIN = int(sys.argv[2])
     AR_P = int(sys.argv[3])
-    DEG_PER_DEC = float(sys.argv[4])
-    N_YEARS_RAMP = int(sys.argv[5])
-    N_windows = int(sys.argv[6])
-    N_ENS = int(sys.argv[7])
-    SAVE_OUTPUT = int(sys.argv[8])
+    THETA = int(sys.argv[4])
+    DEG_PER_DEC = float(sys.argv[5])
+    N_YEARS_RAMP = int(sys.argv[6])
+    N_windows = int(sys.argv[7])
+    N_ENS = int(sys.argv[8])
+    SAVE_OUTPUT = int(sys.argv[9])
 
-    # turn on if you want to test the TLM and ADJ
-    CHECK_TLM = False
-    CHECK_ADJ = False
+    # binary variables that are pre-set
+    CHECK_TLM = False  # check the tangent linear model?
+    CHECK_ADJ = False  # check the adjoint model and the cost function gradient?
+    MANUAL_WINDOWING = True  # set assimilation windows manually?
 
     # filter out runtime warnings which clog log files
     # (they are natural in the scipy.minimize call)
@@ -63,19 +64,22 @@ if __name__ == '__main__':
     DT = 1.0
 
     # make set of assimilation windows
-    tmax_assims = np.linspace(TMIN, 2100, N_windows, dtype=int)[1:]
+    if not MANUAL_WINDOWING:
+        tmax_assims = np.linspace(TMIN, 2100, N_windows, dtype=int)[1:]
+    
+    else:
+        #fine = np.arange(TMIN, 2050, 2)  # fine grained early on
+        #tmax_assims = np.hstack([fine, [2075, 2100]])  # add two larger ones later
+        tmax_assims = np.array([2050])
 
-    # central values of priors on parameters
+    # GLOBAL ENERGY BALANCE MODEL PARAMETERS
+    # central values of priors on global parameters
     L_CEN = 1.06  # overall climate sensitivity
     G_CEN = 0.7  # layer transfer coefficient
     C1_CEN = 8  # heat capacity of surface layer
     C2_CEN = 100  # heat capacity of ocean layer
     F1_CO2_CEN = 4.58  # forcing from log term in CO2
     EPS_CEN = 1.58  # pattern effect
-    ALPHA_R1_CEN = 1.1  # region 1 pattern scaling parameter (global T)
-    ALPHA_R2_CEN = 2.0  # region 2 pattern scaling parameter (global T)
-    BETA_R1_CEN = 0.7  # region 1 pattern scaling parameter (geoengeineering)
-    BETA_R2_CEN = 0.7  # region 2 pattern scaling parameter (geoengineering)
 
     # true parameters used to make observations
     L_TR = 1.06  # sensitivity
@@ -84,20 +88,42 @@ if __name__ == '__main__':
     C2_TR = 100  # heat capacity of ocean layer
     F1_CO2_TR = 4.58  # forcing from log term in CO2
     EPS_TR = 1.58  # pattern effect
-    ALPHA_R1_TR = 1.1  # region 1 pattern scaling parameter (global T)
-    ALPHA_R2_TR = 2.0  # region 2 pattern scaling parameter (global T)
-    BETA_R1_TR = 0.7  # region 1 pattern scaling parameter (geoengeineering)
-    BETA_R2_TR = 0.423  # region 2 pattern scaling parameter (geoengineering)
-    
-    # other parameters of interest that are either diagnostic (i.e., are functions of other things)
-    # or treated as known
-    ANGLE_TR = np.arccos((ALPHA_R1_TR * BETA_R1_TR + ALPHA_R2_TR * BETA_R2_TR)
-                         / np.sqrt((ALPHA_R1_TR**2 + ALPHA_R2_TR**2)
-                                   * (BETA_R1_TR**2 + BETA_R2_TR**2))) * 180 / np.pi  # angle between impact vectors
+
     F_EFF_GEO_TR = 0.09  # W / m2 per TgS / yr of geoengineering (forcing efficacy)
     ECS_TR = F1_CO2_TR * np.log(2) / L_TR  # equilibrium climate sensitivity
     INT_VAR_STD = 0.27  # internal variability standard deviation from Proistosescu and Huybers, Sci Adv, 2017
 
+    # REGIONAL PATTERN SCALING MODEL PARAMETERS
+    # central value and standard deviations of regional variables
+    df = pd.read_csv(DATA_DIR + '/input/regional_calibration_parameters.csv',
+                     delimiter=',', header=0, index_col='THETA')
+    # global temperature related parameters
+    ALPHA_R1_CEN = df.ALPHA_R1_CEN[THETA]  # region 1 pattern scaling parameter (global T)
+    ALPHA_R2_CEN = df.ALPHA_R2_CEN[THETA]  # region 2 pattern scaling parameter (global T)
+    ALPHA_R1_STD = df.ALPHA_R1_STD[THETA]  # standard deviation of alpha 1 prior
+    ALPHA_R2_STD = df.ALPHA_R2_STD[THETA]  # standard deviation of alpha 1 prior
+
+    # geoengineering related parameters
+    XI_R1_CEN = df.XI_R1_CEN[THETA]  # calibration parameter for region 1
+    XI_R2_CEN = df.XI_R2_CEN[THETA]  # calibration parameter for region 2
+    BETA_R1_CEN = XI_R1_CEN * ALPHA_R1_CEN * F_EFF_GEO_TR / L_CEN  # region 1 pattern scaling parameter (geoengeineering)
+    BETA_R2_CEN = XI_R2_CEN * ALPHA_R2_CEN * F_EFF_GEO_TR / L_CEN # region 2 pattern scaling parameter (geoengineering)
+    
+    XI_R1_STD = df.XI_R1_STD[THETA]  # calibration parameter for region 1
+    XI_R2_STD = df.XI_R2_STD[THETA]  # calibration parameter for region 1
+    BETA_R1_STD = XI_R1_STD * ALPHA_R1_CEN * F_EFF_GEO_TR / L_CEN  # region 1 pattern scaling parameter (geoengeineering)
+    BETA_R2_STD = XI_R2_STD * ALPHA_R2_CEN * F_EFF_GEO_TR / L_CEN # region 2 pattern scaling parameter (geoengineering)
+
+    # true values used to make observations
+    ALPHA_R1_TR = df.ALPHA_R1_TR[THETA]  # region 1 pattern scaling parameter (global T)
+    ALPHA_R2_TR = df.ALPHA_R2_TR[THETA]  # region 2 pattern scaling parameter (global T)
+    XI_R1_TR = df.XI_R1_TR[THETA]  # region 1 calibration parameter
+    XI_R2_TR = df.XI_R2_TR[THETA]  # region 2 calibration parameter
+    BETA_R1_TR = XI_R1_TR * ALPHA_R1_CEN * F_EFF_GEO_TR / L_CEN  # region 1 pattern scaling parameter (geoengeineering)
+    BETA_R2_TR = XI_R2_TR * ALPHA_R2_CEN * F_EFF_GEO_TR / L_CEN  # region 1 pattern scaling parameter (geoengeineering)
+
+    print(BETA_R1_TR, BETA_R2_TR)
+    
     """WARM START MODULE.
     """
     print("Warm starting model to get initial conditions for temperature, ocean heat content, and regional temperature...")
@@ -145,8 +171,11 @@ if __name__ == '__main__':
     print("The initial time is: {}".format(TMIN))
     print("Temperature is forced with AR({}) noise.".format(AR_P))
     print("ECS = {}.".format(ECS_TR))
-    print("The angle is {} degrees between temperature and geoengineering.".format(ANGLE_TR))
-    print("There are {} assimilation windows, starting in {} and ending in 2100 (this implies adding one window adds {} years of observations).".format(N_windows - 1, TMIN, (2100 - TMIN)/len(tmax_assims)))
+    print("The angle is {} degrees between temperature and geoengineering.".format(THETA))
+    if not MANUAL_WINDOWING:
+        print("There are {} assimilation windows, starting in {} and ending in 2100 (this implies adding one window adds {} years of observations).".format(N_windows - 1, TMIN, (2100 - TMIN)/len(tmax_assims)))
+    else:
+        print("There are {} assimilation windows, which are {}.".format(len(tmax_assims), tmax_assims))
     print("The 4DVAR ensemble has {} members.".format(N_ENS))
     print("==================================================================")
 
@@ -209,8 +238,7 @@ if __name__ == '__main__':
                                 np.abs(theta_prior_cent[5:7]) * PRIOR_STD_FACTOR,
                                 EPS_STD,
                                 np.abs(theta_prior_cent[8:10]) * PRIOR_STD_FACTOR,
-                                F1_STD,
-                                np.abs(theta_prior_cent[11:15]) * PRIOR_STD_FACTOR,
+                                F1_STD, ALPHA_R1_STD, ALPHA_R2_STD, BETA_R1_STD, BETA_R2_STD,
                                 np.ones(len(mod_errors))])
 
         # make inverse covariance matrices for white noise
@@ -291,7 +319,7 @@ if __name__ == '__main__':
         # ----------------------------------------
         # Set up optimization
         # ----------------------------------------
-        max_iter = 100  # maximum iterations
+        max_iter = 80  # maximum iterations
         tol = 0.001  # tolerance for convergence in 4DVAR
 
         # give first guess at initial conditions
@@ -392,7 +420,10 @@ if __name__ == '__main__':
                                'tol': tol,
                                'run_time': t1 - t0,
                                'ECS': ECS_TR,
-                               'ANGLE': ANGLE_TR,
+                               'ANGLE': THETA,
+                               'xi_r1_tr': XI_R1_TR,
+                               'xi_r2_tr': XI_R2_TR,
+                               'assim_tmax': tmax_assims,
                                'internal_variability_std': INT_VAR_STD})
 
         datatree_dict[str(TMAX)] = ds
@@ -402,16 +433,31 @@ if __name__ == '__main__':
     if SAVE_OUTPUT:
         # get current directory and save
         sim_type = 'pco2geowc'
-        path = DATA_DIR + '/output/' + sim_type\
-            + '/margobs_ws_angle30_'\
-            + SCENARIO + "_"\
-            + sim_type + "_"\
-            + "TMIN" + str(TMIN) + "_"\
-            + "AR" + str(AR_P) + "_"\
-            + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
-            + "NYRSRAMP" + str(N_YEARS_RAMP) + "_"\
-            + "Nwinds" + str(N_windows) + "_"\
-            + "Nens" + str(N_ENS) + ".nc"
+        if not MANUAL_WINDOWING:
+            path = DATA_DIR + '/output/' + sim_type\
+                + '/margobs_ws_'\
+                + SCENARIO + "_"\
+                + sim_type + "_"\
+                + "TMIN" + str(TMIN) + "_"\
+                + "AR" + str(AR_P) + "_"\
+                + "THETA" + str(THETA) + "_"\
+                + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
+                + "NYRSRAMP" + str(N_YEARS_RAMP) + "_"\
+                + "Nwinds" + str(N_windows) + "_"\
+                + "Nens" + str(N_ENS) + ".nc"
+        else:
+            path = DATA_DIR + '/output/' + sim_type\
+                + '/margobs_ws_'\
+                + SCENARIO + "_"\
+                + sim_type + "_"\
+                + "TMIN" + str(TMIN) + "_"\
+                + "AR" + str(AR_P) + "_"\
+                + "THETA" + str(THETA) + "_"\
+                + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
+                + "NYRSRAMP" + str(N_YEARS_RAMP) + "_"\
+                + "Nwinds" + str(len(tmax_assims)) + "custom_"\
+                + "Nens" + str(N_ENS) + ".nc"  
+            
         dt.to_netcdf(filepath=path, mode='w', format='NETCDF4',
                      engine='netcdf4')
 

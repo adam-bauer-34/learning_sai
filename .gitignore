@@ -3,3 +3,4 @@ cmip6_data/
 logs/
 __pycache__/
 .DS_Store
+testing/
