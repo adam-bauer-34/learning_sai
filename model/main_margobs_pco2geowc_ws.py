@@ -65,17 +65,14 @@ if __name__ == '__main__':
     # make set of assimilation windows
     tmax_assims = np.linspace(TMIN, 2100, N_windows, dtype=int)[1:]
 
-    # central values of priors on parameters
+    # GLOBAL ENERGY BALANCE MODEL PARAMETERS
+    # central values of priors on global parameters
     L_CEN = 1.06  # overall climate sensitivity
     G_CEN = 0.7  # layer transfer coefficient
     C1_CEN = 8  # heat capacity of surface layer
     C2_CEN = 100  # heat capacity of ocean layer
     F1_CO2_CEN = 4.58  # forcing from log term in CO2
     EPS_CEN = 1.58  # pattern effect
-    ALPHA_R1_CEN = 1.1  # region 1 pattern scaling parameter (global T)
-    ALPHA_R2_CEN = 2.0  # region 2 pattern scaling parameter (global T)
-    BETA_R1_CEN = 0.7  # region 1 pattern scaling parameter (geoengeineering)
-    BETA_R2_CEN = 0.7  # region 2 pattern scaling parameter (geoengineering)
 
     # true parameters used to make observations
     L_TR = 1.06  # sensitivity
@@ -84,20 +81,41 @@ if __name__ == '__main__':
     C2_TR = 100  # heat capacity of ocean layer
     F1_CO2_TR = 4.58  # forcing from log term in CO2
     EPS_TR = 1.58  # pattern effect
-    ALPHA_R1_TR = 1.1  # region 1 pattern scaling parameter (global T)
-    ALPHA_R2_TR = 2.0  # region 2 pattern scaling parameter (global T)
-    BETA_R1_TR = 0.7  # region 1 pattern scaling parameter (geoengeineering)
-    BETA_R2_TR = 0.423  # region 2 pattern scaling parameter (geoengineering)
-    
-    # other parameters of interest that are either diagnostic (i.e., are functions of other things)
-    # or treated as known
-    ANGLE_TR = np.arccos((ALPHA_R1_TR * BETA_R1_TR + ALPHA_R2_TR * BETA_R2_TR)
-                         / np.sqrt((ALPHA_R1_TR**2 + ALPHA_R2_TR**2)
-                                   * (BETA_R1_TR**2 + BETA_R2_TR**2))) * 180 / np.pi  # angle between impact vectors
+
     F_EFF_GEO_TR = 0.09  # W / m2 per TgS / yr of geoengineering (forcing efficacy)
     ECS_TR = F1_CO2_TR * np.log(2) / L_TR  # equilibrium climate sensitivity
     INT_VAR_STD = 0.27  # internal variability standard deviation from Proistosescu and Huybers, Sci Adv, 2017
 
+
+    # REGIONAL PATTERN SCALING MODEL PARAMETERS
+    # central value and standard deviations of regional variables
+    df = pd.read_csv(DATA_DIR + '/input/regional_calibration_parameters.csv',
+                     delimiter=',', header=0, index_col='THETA')
+    # global temperature related parameters
+    ALPHA_R1_CEN = df.ALPHA_R1_CEN[THETA]  # region 1 pattern scaling parameter (global T)
+    ALPHA_R2_CEN = df.ALPHA_R2_CEN[THETA]  # region 2 pattern scaling parameter (global T)
+    ALPHA_R1_STD = df.ALPHA_R1_STD[THETA]  # standard deviation of alpha 1 prior
+    ALPHA_R2_STD = df.ALPHA_R2_STD[THETA]  # standard deviation of alpha 1 prior
+
+    # geoengineering related parameters
+    XI_R1_CEN = df.XI_R1_CEN[THETA]  # calibration parameter for region 1
+    XI_R2_CEN = df.XI_R2_CEN[THETA]  # calibration parameter for region 2
+    BETA_R1_CEN = XI_R1_CEN * ALPHA_R1_CEN * F_EFF_GEO_TR / L_CEN  # region 1 pattern scaling parameter (geoengeineering)
+    BETA_R2_CEN = XI_R2_CEN * ALPHA_R2_CEN * F_EFF_GEO_TR / L_CEN # region 2 pattern scaling parameter (geoengineering)
+    
+    XI_R1_STD = df.XI_R1_STD[THETA]  # calibration parameter for region 1
+    XI_R2_STD = df.XI_R2_STD[THETA]  # calibration parameter for region 1
+    BETA_R1_STD = XI_R1_STD * ALPHA_R1_CEN * F_EFF_GEO_TR / L_CEN  # region 1 pattern scaling parameter (geoengeineering)
+    BETA_R2_STD = XI_R2_STD * ALPHA_R2_CEN * F_EFF_GEO_TR / L_CEN # region 2 pattern scaling parameter (geoengineering)
+
+    # true values used to make observations
+    ALPHA_R1_TR = df.ALPHA_R1_TR[THETA]  # region 1 pattern scaling parameter (global T)
+    ALPHA_R2_TR = df.ALPHA_R2_TR[THETA]  # region 2 pattern scaling parameter (global T)
+    XI_R1_TR = df.XI_R1_TR[THETA]  # region 1 calibration parameter
+    XI_R2_TR = df.XI_R2_TR[THETA]  # region 2 calibration parameter
+    BETA_R1_TR = XI_R1_TR * ALPHA_R1_CEN * F_EFF_GEO_TR / L_CEN  # region 1 pattern scaling parameter (geoengeineering)
+    BETA_R2_TR = XI_R2_TR * ALPHA_R2_CEN * F_EFF_GEO_TR / L_CEN  # region 1 pattern scaling parameter (geoengeineering)
+    
     """WARM START MODULE.
     """
     print("Warm starting model to get initial conditions for temperature, ocean heat content, and regional temperature...")
@@ -209,8 +227,7 @@ if __name__ == '__main__':
                                 np.abs(theta_prior_cent[5:7]) * PRIOR_STD_FACTOR,
                                 EPS_STD,
                                 np.abs(theta_prior_cent[8:10]) * PRIOR_STD_FACTOR,
-                                F1_STD,
-                                np.abs(theta_prior_cent[11:15]) * PRIOR_STD_FACTOR,
+                                F1_STD, ALPHA_R1_STD, ALPHA_R2_STD, BETA_R1_STD, BETA_R2_STD,
                                 np.ones(len(mod_errors))])
 
         # make inverse covariance matrices for white noise
