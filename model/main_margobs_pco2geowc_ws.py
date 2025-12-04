@@ -176,9 +176,9 @@ if __name__ == '__main__':
     print("ECS = {}.".format(ECS_TR))
     print("The angle is {} degrees between temperature and geoengineering.".format(THETA))
     if not MANUAL_WINDOWING:
-        print("There are {} assimilation windows, starting in {} and ending in 2100 (this implies adding one window adds {} years of observations).".format(N_windows - 1, TMIN, (2100 - TMIN)/len(tmax_assims)))
+        print("There are {} (auto-generated) assimilation windows, starting in {} and ending in 2100 (this implies adding one window adds {} years of observations).".format(N_windows - 1, TMIN, (2100 - TMIN)/len(tmax_assims)))
     else:
-        print("There are {} assimilation windows, which are {}.".format(len(tmax_assims), tmax_assims))
+        print("There are {} assimilation windows that were manually specified, which are {}.".format(len(tmax_assims), tmax_assims))
     print("The 4DVAR ensemble has {} members.".format(N_ENS))
     print("==================================================================")
 
