@@ -41,11 +41,12 @@ if __name__ == '__main__':
     SCENARIO = sys.argv[1]
     TMIN = int(sys.argv[2])
     AR_P = int(sys.argv[3])
-    DEG_PER_DEC = float(sys.argv[4])
-    N_YEARS_RAMP = int(sys.argv[5])
-    N_windows = int(sys.argv[6])
-    N_ENS = int(sys.argv[7])
-    SAVE_OUTPUT = int(sys.argv[8])
+    THETA = int(sys.argv[4])
+    DEG_PER_DEC = float(sys.argv[5])
+    N_YEARS_RAMP = int(sys.argv[6])
+    N_windows = int(sys.argv[7])
+    N_ENS = int(sys.argv[8])
+    SAVE_OUTPUT = int(sys.argv[9])
 
     # turn on if you want to test the TLM and ADJ
     CHECK_TLM = False
@@ -290,7 +291,7 @@ if __name__ == '__main__':
         # ----------------------------------------
         # Set up optimization
         # ----------------------------------------
-        max_iter = 100  # maximum iterations
+        max_iter = 80  # maximum iterations
         tol = 0.001  # tolerance for convergence in 4DVAR
 
         # give first guess at initial conditions
@@ -391,7 +392,7 @@ if __name__ == '__main__':
                                'tol': tol,
                                'run_time': t1 - t0,
                                'ECS': ECS_TR,
-                               'ANGLE': ANGLE_TR,
+                               'ANGLE': THETA,
                                'internal_variability_std': INT_VAR_STD})
 
         datatree_dict[str(TMAX)] = ds
@@ -402,11 +403,12 @@ if __name__ == '__main__':
         # get current directory and save
         sim_type = 'pco2geowc'
         path = DATA_DIR + '/output/' + sim_type\
-            + '/margobs_ws_angle30_'\
+            + '/margobs_ws_'\
             + SCENARIO + "_"\
             + sim_type + "_"\
             + "TMIN" + str(TMIN) + "_"\
             + "AR" + str(AR_P) + "_"\
+            + "THETA" + str(THETA) + "_"\
             + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
             + "NYRSRAMP" + str(N_YEARS_RAMP) + "_"\
             + "Nwinds" + str(N_windows) + "_"\
