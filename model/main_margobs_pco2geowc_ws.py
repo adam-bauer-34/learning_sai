@@ -16,7 +16,6 @@ import warnings
 
 import numpy as np
 import xarray as xr
-import dask.bag as db
 
 from model.src.emis import EmissionsBaseline
 from model.src.pco2geowc.dynamics import get_nonlin_path
