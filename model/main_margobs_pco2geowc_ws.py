@@ -444,6 +444,7 @@ if __name__ == '__main__':
                 + "TMIN" + str(TMIN) + "_"\
                 + "AR" + str(AR_P) + "_"\
                 + "THETA" + str(THETA) + "_"\
+                + "ECS" + str(ECS_TR) + "_"\
                 + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
                 + "NYRSRAMP" + str(N_YEARS_RAMP) + "_"\
                 + "Nwinds" + str(N_windows) + "_"\
@@ -456,6 +457,7 @@ if __name__ == '__main__':
                 + "TMIN" + str(TMIN) + "_"\
                 + "AR" + str(AR_P) + "_"\
                 + "THETA" + str(THETA) + "_"\
+                + "ECS" + str(ECS_TR) + "_"\
                 + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
                 + "NYRSRAMP" + str(N_YEARS_RAMP) + "_"\
                 + "Nwinds" + str(len(tmax_assims)) + "custom_"\
