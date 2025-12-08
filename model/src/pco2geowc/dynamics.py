@@ -51,10 +51,10 @@ def get_nonlin_path(e, theta, TMIN, TMAX, DT):
 
         # Tr = alpha_r * T1 - beta_r * geo_level
         paths[3, t] = ALPHA_R1 * paths[0, t]\
-            - BETA_R1 * e.emis['geo'][t]
+            + BETA_R1 * e.emis['geo'][t]
         
         paths[4, t] = ALPHA_R2 * paths[0, t]\
-            - BETA_R2 * e.emis['geo'][t]
+            + BETA_R2 * e.emis['geo'][t]
 
     # make stationary paths for parameters and model errors
     paths[5:] = np.array([
@@ -204,7 +204,7 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
         mod_error[t+1] - T1 * (G * EPS + L) + T2 * G * EPS + F
     ) / C1
     TLM_matrix[3, 12] = 0.
-    TLM_matrix[3, 13] = - e.emis['geo'][t+1]
+    TLM_matrix[3, 13] = e.emis['geo'][t+1]
     TLM_matrix[3, 14] = 0.
     TLM_matrix[3, 15 + t] = DT * ALPHA_R1 / C1  # this bit is for model errors
 
@@ -228,7 +228,7 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
         mod_error[t+1] - T1 * (G * EPS + L) + T2 * G * EPS + F
     ) / C1
     TLM_matrix[4, 13] = 0.
-    TLM_matrix[4, 14] = - e.emis['geo'][t+1]
+    TLM_matrix[4, 14] = e.emis['geo'][t+1]
     TLM_matrix[4, 15 + t] = DT * ALPHA_R2 / C1  # this bit is for model errors
 
     # all the parameters are just the identity
