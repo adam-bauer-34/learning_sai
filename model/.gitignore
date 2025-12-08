@@ -1,4 +1,5 @@
 old/
+.ipynb_checkpoints/
 slurm*
 *.batch
 .DS_stores

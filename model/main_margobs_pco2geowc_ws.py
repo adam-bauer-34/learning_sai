@@ -73,9 +73,8 @@ if __name__ == '__main__':
         tmax_assims = np.linspace(TMIN, 2100, N_windows, dtype=int)[1:]
     
     else:
-        #fine = np.arange(TMIN, 2050, 2)  # fine grained early on
-        #tmax_assims = np.hstack([fine, [2075, 2100]])  # add two larger ones later
-        tmax_assims = np.array([2050])
+        fine = np.arange(TMIN, 2050, 2)  # fine grained early on
+        tmax_assims = np.hstack([fine, [2075, 2100]])[1:]  # add two larger ones later, ignore TMIN
 
     # GLOBAL ENERGY BALANCE MODEL PARAMETERS
     # central values of priors on global parameters
