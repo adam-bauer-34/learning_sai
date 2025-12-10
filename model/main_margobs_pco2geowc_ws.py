@@ -191,7 +191,7 @@ if __name__ == '__main__':
         # make emissions baseline
         e = EmissionsBaseline(SCENARIO, TMIN, TMAX,
                               geo=True, DEG_PER_DEC=DEG_PER_DEC,
-                              LAMBDA=L_CEN, F_EFF_GEO=F_EFF_GEO_TR,
+                              LAMBDA=L_CEN, GAMMA=G_CEN, EPSILON=EPS_CEN, F_EFF_GEO=F_EFF_GEO_TR,
                               T_START=TMIN, T_END=TMIN + N_YEARS_RAMP)
 
         # make model errors and their covariance matrix
