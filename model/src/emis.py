@@ -27,12 +27,14 @@ class EmissionsBaseline():
     """
 
     def __init__(self, scenario, t_min, t_max,
-                 geo=False, DEG_PER_DEC=0.1, LAMBDA=1.0, F_EFF_GEO=0.0,
+                 geo=False, DEG_PER_DEC=0.1, LAMBDA=1.0, GAMMA=0.7, EPSILON=1.58, F_EFF_GEO=0.0,
                  T_START=2020, T_END=2070):
         self.scenario = scenario
         self.geo = geo  # whether or not this class should have geoengineering attributes
         self.DEG_PER_DEC = DEG_PER_DEC  # degrees C offset by geo per decade
         self.LAMBDA = LAMBDA  # climate feedback parameter, used to determine SAI rate
+        self.GAMMA = GAMMA  # ocean heat uptake efficiency
+        self.EPSILON = EPSILON  # pattern effect factor
         self.F_EFF_GEO = F_EFF_GEO
         self.T_START = int(T_START)  # year SAI begins
         self.T_END = int(T_END)  # year SAI levels out
@@ -205,7 +207,7 @@ class EmissionsBaseline():
         geo_constant_times = self.times_ext[self.times_ext >= self.T_END]
         
         # make SAI ramp up 
-        geo_ramp = (self.TOTAL_TEMP_OFFSET * self.LAMBDA / self.F_EFF_GEO) * (
+        geo_ramp = (self.TOTAL_TEMP_OFFSET * (self.LAMBDA + self.GAMMA * self.EPSILON) / self.F_EFF_GEO) * (
             (geo_ramp_up_times - self.T_START) / (self.T_END - self.T_START)
             )
         
@@ -229,7 +231,10 @@ if __name__ == '__main__':
     t_max = 2100
     geo = True
     degs_per_dec = [0.0, 0.05, 0.1, 0.2]
-    LAM = 1.28
+    LAM = 4.58 * np.log(2) / 3.0  # feedback for ECS = 3.0
+    print(LAM)
+    GAM = 0.7  # use central value
+    EPS = 1.58  # use central value
     F_EFF_GEO = 0.09
     ts = 2020
     tf = 2070
@@ -238,7 +243,7 @@ if __name__ == '__main__':
 
     for deg in degs_per_dec:
         e = EmissionsBaseline(scenario, t_min, t_max,
-                    geo=geo, DEG_PER_DEC=deg, LAMBDA=LAM, F_EFF_GEO=F_EFF_GEO,
+                    geo=geo, DEG_PER_DEC=deg, LAMBDA=LAM, GAMMA=GAM, EPSILON=EPS, F_EFF_GEO=F_EFF_GEO,
                     T_START=ts, T_END=tf)
         geo_ts_emis.append(e.emis['geo'])
         geo_ts_force.append(e.forcing['geo'])
