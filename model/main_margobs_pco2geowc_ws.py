@@ -54,9 +54,9 @@ if __name__ == '__main__':
         print("WARNING: Chaning ECS changes the global climate feedback, \lambda, not forcing sensitivity to CO2 concentrations.")
 
     # binary variables that are pre-set
-    CHECK_TLM = True  # check the tangent linear model?
-    CHECK_ADJ = True  # check the adjoint model and the cost function gradient?
-    MANUAL_WINDOWING = False  # set assimilation windows manually?
+    CHECK_TLM = False  # check the tangent linear model?
+    CHECK_ADJ = False  # check the adjoint model and the cost function gradient?
+    MANUAL_WINDOWING = True  # set assimilation windows manually?
 
     # filter out runtime warnings which clog log files
     # (they are natural in the scipy.minimize call)
@@ -110,7 +110,6 @@ if __name__ == '__main__':
     # geoengineering related parameters
     BETA_R1_CEN = df.BETA_R1_CEN[THETA]  # region 1 pattern scaling parameter (geoengeineering)
     BETA_R2_CEN = df.BETA_R2_CEN[THETA]  # region 2 pattern scaling parameter (geoengeineering)
-    
     BETA_R1_STD = df.BETA_R1_STD[THETA]  # region 1 pattern scaling parameter (geoengeineering)
     BETA_R2_STD = df.BETA_R2_STD[THETA]  # region 2 pattern scaling parameter (geoengeineering)
 
@@ -174,6 +173,9 @@ if __name__ == '__main__':
         print("There are {} assimilation windows that were manually specified, which are {}.".format(len(tmax_assims), tmax_assims))
     print("The 4DVAR ensemble has {} members.".format(N_ENS))
     print("==================================================================")
+
+    """ASSIMILATION MODULE
+    """
 
     # dictionary to make datatree out of later
     datatree_dict = {}
@@ -417,8 +419,6 @@ if __name__ == '__main__':
                                'run_time': t1 - t0,
                                'ECS': ECS_TR,
                                'ANGLE': THETA,
-                               'xi_r1_tr': XI_R1_TR,
-                               'xi_r2_tr': XI_R2_TR,
                                'assim_tmax': tmax_assims,
                                'internal_variability_std': INT_VAR_STD})
 
