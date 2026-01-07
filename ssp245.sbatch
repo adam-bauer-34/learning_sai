@@ -40,14 +40,17 @@ module load python/miniforge-25.3.0
 source activate /project/bbcael/ambauer/learning_sai/.env
 
 # run simulations
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 10 2.0 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 18 2.0 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 25 2.0 0.1 50 1 500 1 
+# for now, no ECS != 3.0 simulations, while i figure out beta calibrations for those
+# python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 10 2.0 0.1 50 1 500 1 
+# python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 18 2.0 0.1 50 1 500 1 
+# python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 25 2.0 0.1 50 1 500 1 
 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 10 3.0 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 18 3.0 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 25 3.0 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 9 3.0 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 12 3.0 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 14 3.0 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 17 3.0 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 21 3.0 0.1 50 1 500 1 
 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 10 4.5 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 18 4.5 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 25 4.5 0.1 50 1 500 1 
+# python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 10 4.5 0.1 50 1 500 1 
+# python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 18 4.5 0.1 50 1 500 1 
+# python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 25 4.5 0.1 50 1 500 1 
