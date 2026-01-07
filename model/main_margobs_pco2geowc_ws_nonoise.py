@@ -194,9 +194,10 @@ if __name__ == '__main__':
                               T_START=TMIN, T_END=TMIN + N_YEARS_RAMP)
 
         # make model errors and their covariance matrix
-        mod_errors, mod_error_covar = gen_noise_ts(AR_P, len(e.conc['CO2']),
-                                                   INT_VAR_STD,
-                                                   CORR_COEFFS=[0.2])
+        mod_errors = np.zeros_like(len(e.conc['CO2']))  # set model errors to zero
+        mod_error_covar = get_covar_white(np.array([1.0] * len(times)),
+                                          len(times),
+                                          inv=True)  # set covariance to identity
 
         # true vector of controls: initial conditions, parameters, and model
         # errors
@@ -209,7 +210,8 @@ if __name__ == '__main__':
         theta_prior_cent = np.hstack([np.array([T1_CEN, T2_CEN,
                                      Q_CEN, T_R1_CEN, T_R2_CEN,
                                      L_CEN, G_CEN, EPS_CEN, C1_CEN, C2_CEN, F1_CO2_CEN,
-                                     ALPHA_R1_CEN, ALPHA_R2_CEN, BETA_R1_CEN, BETA_R2_CEN]), mod_errors])
+                                     ALPHA_R1_CEN, ALPHA_R2_CEN, BETA_R1_CEN, BETA_R2_CEN]),
+                                     np.zeros_like(mod_errors)])
 
         # make true data path over this time window
         data_tr_p, times = get_nonlin_path(e, theta_tr, TMIN, TMAX, DT)

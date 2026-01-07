@@ -101,6 +101,7 @@ if __name__ == '__main__':
     # central value and standard deviations of regional variables
     df = pd.read_csv(DATA_DIR + '/input/regional_calibration_parameters.csv',
                      delimiter=',', header=0, index_col='THETA')
+    
     # global temperature related parameters
     ALPHA_R1_CEN = df.ALPHA_R1_CEN[THETA]  # region 1 pattern scaling parameter (global T)
     ALPHA_R2_CEN = df.ALPHA_R2_CEN[THETA]  # region 2 pattern scaling parameter (global T)
@@ -205,12 +206,13 @@ if __name__ == '__main__':
                              Q_TR, T_R1_TR, T_R2_TR,
                              L_TR, G_TR, EPS_TR, C1_TR, C2_TR, F1_CO2_TR,
                              ALPHA_R1_TR, ALPHA_R2_TR, BETA_R1_TR, BETA_R2_TR]), mod_errors])
-
+        
         # central value of priors on each parameter
         theta_prior_cent = np.hstack([np.array([T1_CEN, T2_CEN,
                                      Q_CEN, T_R1_CEN, T_R2_CEN,
                                      L_CEN, G_CEN, EPS_CEN, C1_CEN, C2_CEN, F1_CO2_CEN,
-                                     ALPHA_R1_CEN, ALPHA_R2_CEN, BETA_R1_CEN, BETA_R2_CEN]), mod_errors])
+                                     ALPHA_R1_CEN, ALPHA_R2_CEN, BETA_R1_CEN, BETA_R2_CEN]),
+                                     np.zeros_like(mod_errors)])
 
         # make true data path over this time window
         data_tr_p, times = get_nonlin_path(e, theta_tr, TMIN, TMAX, DT)
@@ -317,7 +319,7 @@ if __name__ == '__main__':
         # ----------------------------------------
         # Set up optimization
         # ----------------------------------------
-        max_iter = 80  # maximum iterations
+        max_iter = 100  # maximum iterations
         tol = 0.001  # tolerance for convergence in 4DVAR
 
         # give first guess at initial conditions
@@ -463,3 +465,4 @@ if __name__ == '__main__':
 
     else:
         print(dt)
+    
