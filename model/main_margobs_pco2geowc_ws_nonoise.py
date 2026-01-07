@@ -94,7 +94,7 @@ if __name__ == '__main__':
     EPS_TR = 1.58  # pattern effect
 
     F_EFF_GEO_TR = 0.09  # W / m2 per TgS / yr of geoengineering (forcing efficacy)
-    INT_VAR_STD = 0.27  # internal variability standard deviation from Proistosescu and Huybers, Sci Adv, 2017
+    INT_VAR_STD = float(1e-5)  # internal variability standard deviation from Proistosescu and Huybers, Sci Adv, 2017
 
     # REGIONAL PATTERN SCALING MODEL PARAMETERS
     # central value and standard deviations of regional variables
@@ -194,10 +194,7 @@ if __name__ == '__main__':
                               T_START=TMIN, T_END=TMIN + N_YEARS_RAMP)
 
         # make model errors and their covariance matrix
-        mod_errors = np.zeros_like(len(e.conc['CO2']))  # set model errors to zero
-        mod_error_covar = get_covar_white(np.array([1.0] * len(times)),
-                                          len(times),
-                                          inv=True)  # set covariance to identity
+        mod_errors = np.zeros_like(e.conc['CO2'], dtype=float)  # set model errors to zero
 
         # true vector of controls: initial conditions, parameters, and model
         # errors
@@ -244,11 +241,16 @@ if __name__ == '__main__':
         inv_covar_prior = get_covar_white(prior_stds,
                                           len(prior_stds),
                                           inv=True)
+        
+        # make identitiy matrix as covariance for model errors since we have no noise
+        inv_covar_mod_error = get_covar_white(np.array([INT_VAR_STD] * len(times)),
+                                            len(times),
+                                            inv=True)  # set covariance to identity
 
         # add in inverse covarianace matrix of model errors (which may not be
         # white, like the other parameters)
         inv_covar_prior[-len(mod_errors):,
-                        -len(mod_errors):] = np.linalg.inv(mod_error_covar)
+                        -len(mod_errors):] = inv_covar_mod_error
 
         # make observation error covariance matrices
         inv_covar_T1_obs = get_covar_white(np.array([OBS_T1_STD] *
@@ -432,7 +434,7 @@ if __name__ == '__main__':
         sim_type = 'pco2geowc'
         if not MANUAL_WINDOWING:
             path = DATA_DIR + '/output/' + sim_type\
-                + '/margobs_ws_'\
+                + '/margobs_ws_nonoise_'\
                 + SCENARIO + "_"\
                 + sim_type + "_"\
                 + "TMIN" + str(TMIN) + "_"\
@@ -445,7 +447,7 @@ if __name__ == '__main__':
                 + "Nens" + str(N_ENS) + ".nc"
         else:
             path = DATA_DIR + '/output/' + sim_type\
-                + '/margobs_ws_'\
+                + '/margobs_ws_nonoise_'\
                 + SCENARIO + "_"\
                 + sim_type + "_"\
                 + "TMIN" + str(TMIN) + "_"\
@@ -464,3 +466,4 @@ if __name__ == '__main__':
 
     else:
         print(dt)
+        print(dt['2100'].ds.controls.sel(vari=['q' + str(i) for i in range(75)]).mean(dim='ens_mem'))
