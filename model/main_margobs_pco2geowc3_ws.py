@@ -105,26 +105,28 @@ if __name__ == '__main__':
     # global temperature related parameters
     ALPHA_R1_CEN = df.ALPHA_R1_CEN[THETA]  # region 1 pattern scaling parameter (global T)
     ALPHA_R2_CEN = df.ALPHA_R2_CEN[THETA]  # region 2 pattern scaling parameter (global T)
-    ALPHA_R3_CEN = df.ALPHA_R2_CEN[THETA]  # region 3 pattern scaling parameter (global T)
+    ALPHA_R3_CEN = df.ALPHA_R3_CEN[THETA]  # region 3 pattern scaling parameter (global T)
     ALPHA_R1_STD = df.ALPHA_R1_STD[THETA]  # standard deviation of alpha 1 prior
     ALPHA_R2_STD = df.ALPHA_R2_STD[THETA]  # standard deviation of alpha 2 prior
-    ALPHA_R3_STD = df.ALPHA_R2_STD[THETA]  # standard deviation of alpha 3 prior
+    ALPHA_R3_STD = df.ALPHA_R3_STD[THETA]  # standard deviation of alpha 3 prior
 
     # geoengineering related parameters
     BETA_R1_CEN = df.BETA_R1_CEN[THETA]  # region 1 pattern scaling parameter (geoengeineering)
     BETA_R2_CEN = df.BETA_R2_CEN[THETA]  # region 2 pattern scaling parameter (geoengeineering)
-    BETA_R3_CEN = df.BETA_R2_CEN[THETA]  # region 3 pattern scaling parameter (geoengeineering)
+    BETA_R3_CEN = df.BETA_R3_CEN[THETA]  # region 3 pattern scaling parameter (geoengeineering)
     BETA_R1_STD = df.BETA_R1_STD[THETA]  # region 1 pattern scaling parameter (geoengeineering)
     BETA_R2_STD = df.BETA_R2_STD[THETA]  # region 2 pattern scaling parameter (geoengeineering)
-    BETA_R3_STD = df.BETA_R2_STD[THETA]  # region 3 pattern scaling parameter (geoengeineering)
+    BETA_R3_STD = df.BETA_R3_STD[THETA]  # region 3 pattern scaling parameter (geoengeineering)
 
     # true values used to make observations
     ALPHA_R1_TR = df.ALPHA_R1_TR[THETA]  # region 1 pattern scaling parameter (global T)
     ALPHA_R2_TR = df.ALPHA_R2_TR[THETA]  # region 2 pattern scaling parameter (global T)
-    ALPHA_R3_TR = df.ALPHA_R2_TR[THETA]  # region 3 pattern scaling parameter (global T)
+    ALPHA_R3_TR = df.ALPHA_R3_TR[THETA]  # region 3 pattern scaling parameter (global T)
     BETA_R1_TR = df.BETA_R1_TR[THETA]  # region 1 pattern scaling parameter (geoengeineering)
     BETA_R2_TR = df.BETA_R2_TR[THETA]  # region 2 pattern scaling parameter (geoengeineering)
-    BETA_R3_TR = df.BETA_R2_TR[THETA]  # region 3 pattern scaling parameter (geoengeineering)
+    BETA_R3_TR = df.BETA_R3_TR[THETA]  # region 3 pattern scaling parameter (geoengeineering)
+
+    print(ALPHA_R3_CEN, ALPHA_R3_TR, BETA_R3_CEN, BETA_R3_TR, ALPHA_R3_STD, BETA_R3_STD)
 
     """WARM START MODULE.
     """
@@ -138,9 +140,9 @@ if __name__ == '__main__':
     # global mean ocean temperature, ocean heat content, and two regional temperatures
     # that we use pattern scaling to find: Tri = alpha_ri * T1 - beta_ri * geo_level.
     # since geo_level = 0 in the warm start, these are all zero (since T1 = 0 at 1850).
-    theta_ws = np.hstack([np.array([0.0, 0.0, 0.0, 0.0, 0.0,
+    theta_ws = np.hstack([np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                          L_TR, G_TR, EPS_TR, C1_TR, C2_TR, F1_CO2_TR,
-                         ALPHA_R1_TR, ALPHA_R2_TR, BETA_R1_TR, BETA_R2_TR]),
+                         ALPHA_R1_TR, ALPHA_R2_TR, ALPHA_R3_TR, BETA_R1_TR, BETA_R2_TR, BETA_R3_TR]),
                          np.zeros_like(e_ws.conc['CO2'])])
 
     # make "warm start" to get true initial conditions
@@ -430,7 +432,7 @@ if __name__ == '__main__':
                                 'vari': (['vari'], names),
                                 'ens_mem': (['ens_mem'], np.arange(0, N_ENS,
                                                                    1)),
-                                'obs_var': (['obs_var'], ['T1', 'Q', 'T_R1', 'T_R2'])},
+                                'obs_var': (['obs_var'], ['T1', 'Q', 'T_R1', 'T_R2', 'T_R3'])},
                         attrs={'TMIN': TMIN,
                                'TMAX': TMAX,
                                'DT': DT,

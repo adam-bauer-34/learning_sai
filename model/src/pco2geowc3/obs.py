@@ -51,7 +51,7 @@ def get_obs_jac(nl_path, t_ind):
     """
 
     # initialize empty jacobian
-    jac = np.zeros((4, np.shape(nl_path)[0]))
+    jac = np.zeros((5, np.shape(nl_path)[0]))
 
     # just manually fill in the nonzero bits
     # for surface temperature, there is only one component, and for ocean heat

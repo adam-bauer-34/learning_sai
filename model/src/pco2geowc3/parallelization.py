@@ -18,7 +18,7 @@ class EnsembleMember():
 
     def __init__(self, theta_p, flag, tol, max_iter, TMIN, TMAX, DT,
                  theta_tr, inv_covar_prior, inv_covar_T1_obs, inv_covar_Q_obs,
-                 inv_covar_T_R1_obs, inv_covar_T_R2_obs,
+                 inv_covar_T_R1_obs, inv_covar_T_R2_obs, inv_covar_T_R3_obs,
                  obs, times):
 
         # set class attributes

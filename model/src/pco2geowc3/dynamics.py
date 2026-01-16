@@ -171,7 +171,7 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[1, 13] = 0.0
     TLM_matrix[1, 14] = 0.0
     TLM_matrix[1, 15] = 0.0
-    TLM_matrix[1, 1] = 0.0
+    TLM_matrix[1, 16] = 0.0
     TLM_matrix[1, 17] = 0.0
     TLM_matrix[1, 18 + t] = 0.0
 
