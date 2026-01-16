@@ -5,7 +5,7 @@ University of Illinois Urbana Champaign
 8.23.2024
 
 To run:
-    python main_margobs_pco2sulwc.py [scenario] [TMIN] [P] [L or F] [SIGMA]
+    python main_margobs_pco2sulwc.py [scenario] [TMIN] [L or F] [SIGMA]
         [N_windows] [N_ENS] [SAVE_OUTPUT]
 """
 
@@ -18,11 +18,10 @@ import numpy as np
 import xarray as xr
 
 from model.src.emis import EmissionsBaseline
-from model.src.pco2geowc.dynamics import get_nonlin_path
-from model.src.pco2geowc.checks import *
-from model.src.pco2geowc.obs import get_obs_from_dynamics
-from model.src.pco2geowc.parallelization import EnsembleMember, runner_4dvar
-from model.src.pco2geowc.model_errors import gen_noise_ts
+from model.src.pco2geowc_nn.dynamics import get_nonlin_path
+from model.src.pco2geowc_nn.checks import *
+from model.src.pco2geowc_nn.obs import get_obs_from_dynamics
+from model.src.pco2geowc_nn.parallelization import EnsembleMember, runner_4dvar
 from model.src.stats.covar import get_covar_white
 from model.src.stats.draws import get_prior_draws
 from dask.distributed import Client
@@ -39,14 +38,13 @@ if __name__ == '__main__':
     # parse command line stuff
     SCENARIO = sys.argv[1]
     TMIN = int(sys.argv[2])
-    AR_P = int(sys.argv[3])
-    THETA = int(sys.argv[4])
-    ECS_TR = float(sys.argv[5])
-    DEG_PER_DEC = float(sys.argv[6])
-    N_YEARS_RAMP = int(sys.argv[7])
-    N_windows = int(sys.argv[8])
-    N_ENS = int(sys.argv[9])
-    SAVE_OUTPUT = int(sys.argv[10])
+    THETA = int(sys.argv[3])
+    ECS_TR = float(sys.argv[4])
+    DEG_PER_DEC = float(sys.argv[5])
+    N_YEARS_RAMP = int(sys.argv[6])
+    N_windows = int(sys.argv[7])
+    N_ENS = int(sys.argv[8])
+    SAVE_OUTPUT = int(sys.argv[9])
 
     # raise ECS warning
     if ECS_TR != 3.0:
@@ -94,7 +92,6 @@ if __name__ == '__main__':
     EPS_TR = 1.58  # pattern effect
 
     F_EFF_GEO_TR = 0.09  # W / m2 per TgS / yr of geoengineering (forcing efficacy)
-    INT_VAR_STD = float(1e-5)  # internal variability standard deviation from Proistosescu and Huybers, Sci Adv, 2017
 
     # REGIONAL PATTERN SCALING MODEL PARAMETERS
     # central value and standard deviations of regional variables
@@ -132,8 +129,7 @@ if __name__ == '__main__':
     # since geo_level = 0 in the warm start, these are all zero (since T1 = 0 at 1850).
     theta_ws = np.hstack([np.array([0.0, 0.0, 0.0, 0.0, 0.0,
                          L_TR, G_TR, EPS_TR, C1_TR, C2_TR, F1_CO2_TR,
-                         ALPHA_R1_TR, ALPHA_R2_TR, BETA_R1_TR, BETA_R2_TR]),
-                         np.zeros_like(e_ws.conc['CO2'])])
+                         ALPHA_R1_TR, ALPHA_R2_TR, BETA_R1_TR, BETA_R2_TR])])
 
     # make "warm start" to get true initial conditions
     data_ws, _ = get_nonlin_path(e_ws, theta_ws, 1850, TMIN, DT)
@@ -163,7 +159,7 @@ if __name__ == '__main__':
     print("Temperature offset by SAI per decade: {} deg C".format(DEG_PER_DEC))
     print("The SAI ramp-up occurs over {} years".format(N_YEARS_RAMP))
     print("The initial time is: {}".format(TMIN))
-    print("Temperature is forced with AR({}) noise.".format(AR_P))
+    print("NOTE: There is no internal variability in this experiment.")
     print("ECS = {}.".format(ECS_TR))
     print("The angle is {} degrees between temperature and geoengineering.".format(THETA))
     if not MANUAL_WINDOWING:
@@ -193,22 +189,18 @@ if __name__ == '__main__':
                               LAMBDA=L_CEN, GAMMA=G_CEN, EPSILON=EPS_CEN, F_EFF_GEO=F_EFF_GEO_TR,
                               T_START=TMIN, T_END=TMIN + N_YEARS_RAMP)
 
-        # make model errors and their covariance matrix
-        mod_errors = np.zeros_like(e.conc['CO2'], dtype=float)  # set model errors to zero
-
         # true vector of controls: initial conditions, parameters, and model
         # errors
-        theta_tr = np.hstack([np.array([T1_TR, T2_TR,
+        theta_tr = np.array([T1_TR, T2_TR,
                              Q_TR, T_R1_TR, T_R2_TR,
                              L_TR, G_TR, EPS_TR, C1_TR, C2_TR, F1_CO2_TR,
-                             ALPHA_R1_TR, ALPHA_R2_TR, BETA_R1_TR, BETA_R2_TR]), mod_errors])
+                             ALPHA_R1_TR, ALPHA_R2_TR, BETA_R1_TR, BETA_R2_TR])
 
         # central value of priors on each parameter
-        theta_prior_cent = np.hstack([np.array([T1_CEN, T2_CEN,
+        theta_prior_cent = np.array([T1_CEN, T2_CEN,
                                      Q_CEN, T_R1_CEN, T_R2_CEN,
                                      L_CEN, G_CEN, EPS_CEN, C1_CEN, C2_CEN, F1_CO2_CEN,
-                                     ALPHA_R1_CEN, ALPHA_R2_CEN, BETA_R1_CEN, BETA_R2_CEN]),
-                                     np.zeros_like(mod_errors)])
+                                     ALPHA_R1_CEN, ALPHA_R2_CEN, BETA_R1_CEN, BETA_R2_CEN])
 
         # make true data path over this time window
         data_tr_p, times = get_nonlin_path(e, theta_tr, TMIN, TMAX, DT)
@@ -234,23 +226,12 @@ if __name__ == '__main__':
                                 np.abs(theta_prior_cent[5:7]) * PRIOR_STD_FACTOR,
                                 EPS_STD,
                                 np.abs(theta_prior_cent[8:10]) * PRIOR_STD_FACTOR,
-                                F1_STD, ALPHA_R1_STD, ALPHA_R2_STD, BETA_R1_STD, BETA_R2_STD,
-                                np.ones(len(mod_errors))])
+                                F1_STD, ALPHA_R1_STD, ALPHA_R2_STD, BETA_R1_STD, BETA_R2_STD])
 
         # make inverse covariance matrices for white noise
         inv_covar_prior = get_covar_white(prior_stds,
                                           len(prior_stds),
                                           inv=True)
-        
-        # make identitiy matrix as covariance for model errors since we have no noise
-        inv_covar_mod_error = get_covar_white(np.array([INT_VAR_STD] * len(times)),
-                                            len(times),
-                                            inv=True)  # set covariance to identity
-
-        # add in inverse covarianace matrix of model errors (which may not be
-        # white, like the other parameters)
-        inv_covar_prior[-len(mod_errors):,
-                        -len(mod_errors):] = inv_covar_mod_error
 
         # make observation error covariance matrices
         inv_covar_T1_obs = get_covar_white(np.array([OBS_T1_STD] *
@@ -327,11 +308,6 @@ if __name__ == '__main__':
         theta_prior = get_prior_draws(theta_prior_cent,
                                       np.linalg.inv(inv_covar_prior),
                                       N_ENS)
-        
-        # Check on object sizes
-        #print("emissions object is:")
-        #print(sys.getsizeof(e))
-        #print(asizeof.asizeof(e) / 1e6)
 
         # scatter emissions baseline class and true observations to each
         # dask worker 
@@ -346,9 +322,6 @@ if __name__ == '__main__':
                                            inv_covar_T_R2_obs, obs, times)
                             for theta_p in theta_prior]
         
-        #for i, ee in enumerate(ensemble_members):
-        #    print(i, asizeof.asizeof(ee) / 1e6, " MB")
-
         # solve the assimilation using dask
         t0 = time.time()
 
@@ -363,7 +336,6 @@ if __name__ == '__main__':
         opt_ensmems = c.gather(futures)
 
         t1 = time.time()
-        # print(t1 - t0)
         print("Done!")
 
         print("Processing output...")
@@ -386,9 +358,8 @@ if __name__ == '__main__':
         # make dataset for this assimilation window and save to dictionary that
         # we'll use to make a datatree later
         # ---------------------------------------------------------------------
-        names = np.hstack([['T1', 'T2', 'Q', 'T_R1', 'T_R2', 'L', 'G', 'EPS', 'C1', 'C2', 'F1_CO2',
-                            'ALPHA_R1', 'ALPHA_R2', 'BETA_R1', 'BETA_R2'],
-                           ['q' + str(i) for i in range(len(times))]])
+        names = ['T1', 'T2', 'Q', 'T_R1', 'T_R2', 'L', 'G', 'EPS', 'C1', 'C2', 'F1_CO2',
+                 'ALPHA_R1', 'ALPHA_R2', 'BETA_R1', 'BETA_R2']
 
         ds = xr.Dataset(data_vars={'data_final': (['ens_mem', 'vari', 'time'],
                                                   data),
@@ -422,8 +393,7 @@ if __name__ == '__main__':
                                'run_time': t1 - t0,
                                'ECS': ECS_TR,
                                'ANGLE': THETA,
-                               'assim_tmax': tmax_assims,
-                               'internal_variability_std': INT_VAR_STD})
+                               'assim_tmax': tmax_assims})
 
         datatree_dict[str(TMAX)] = ds
 
@@ -431,27 +401,26 @@ if __name__ == '__main__':
 
     if SAVE_OUTPUT:
         # get current directory and save
-        sim_type = 'pco2geowc'
+        sim_type = 'pco2geowc_nn'
         if not MANUAL_WINDOWING:
             path = DATA_DIR + '/output/' + sim_type\
-                + '/margobs_ws_nonoise_'\
+                + '/margobs_ws_'\
                 + SCENARIO + "_"\
                 + sim_type + "_"\
                 + "TMIN" + str(TMIN) + "_"\
-                + "AR" + str(AR_P) + "_"\
                 + "THETA" + str(THETA) + "_"\
                 + "ECS" + str(ECS_TR) + "_"\
                 + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
                 + "NYRSRAMP" + str(N_YEARS_RAMP) + "_"\
                 + "Nwinds" + str(N_windows) + "_"\
                 + "Nens" + str(N_ENS) + ".nc"
+            
         else:
             path = DATA_DIR + '/output/' + sim_type\
                 + '/margobs_ws_nonoise_'\
                 + SCENARIO + "_"\
                 + sim_type + "_"\
                 + "TMIN" + str(TMIN) + "_"\
-                + "AR" + str(AR_P) + "_"\
                 + "THETA" + str(THETA) + "_"\
                 + "ECS" + str(ECS_TR) + "_"\
                 + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
@@ -466,4 +435,3 @@ if __name__ == '__main__':
 
     else:
         print(dt)
-        print(dt['2100'].ds.controls.sel(vari=['q' + str(i) for i in range(75)]).mean(dim='ens_mem'))

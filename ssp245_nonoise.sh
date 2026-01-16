@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=ssp245-white
-#SBATCH --output=logs/ssp245-white.out
-#SBATCH --error=logs/ssp245-white.err
+#SBATCH --job-name=ssp245-nn
+#SBATCH --output=logs/ssp245-n.out
+#SBATCH --error=logs/ssp245-nn.err
 
 #SBATCH --account=pi-bbcael
 #SBATCH --partition=caslake
@@ -45,11 +45,11 @@ source activate /project/bbcael/ambauer/learning_sai/.env
 # python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 18 2.0 0.1 50 1 500 1 
 # python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 25 2.0 0.1 50 1 500 1 
 
-python -m model.main_margobs_pco2geowc_ws_nonoise ssp245 2025 0 9 3.0 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws_nonoise ssp245 2025 0 12 3.0 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws_nonoise ssp245 2025 0 14 3.0 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws_nonoise ssp245 2025 0 17 3.0 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws_nonoise ssp245 2025 0 21 3.0 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc-nn_ws_nonoise ssp245 2025 9 3.0 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc-nn_ws_nonoise ssp245 2025 12 3.0 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc-nn_ws_nonoise ssp245 2025 14 3.0 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc-nn_ws_nonoise ssp245 2025 17 3.0 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc-nn_ws_nonoise ssp245 2025 21 3.0 0.1 50 1 500 1
 
 # python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 10 4.5 0.1 50 1 500 1 
 # python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 18 4.5 0.1 50 1 500 1 
