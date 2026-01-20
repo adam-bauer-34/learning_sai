@@ -54,9 +54,9 @@ if __name__ == '__main__':
         print("WARNING: Chaning ECS changes the global climate feedback, \lambda, not forcing sensitivity to CO2 concentrations.")
 
     # binary variables that are pre-set
-    CHECK_TLM = True  # check the tangent linear model?
-    CHECK_ADJ = True  # check the adjoint model and the cost function gradient?
-    MANUAL_WINDOWING = False  # set assimilation windows manually?
+    CHECK_TLM = False  # check the tangent linear model?
+    CHECK_ADJ = False  # check the adjoint model and the cost function gradient?
+    MANUAL_WINDOWING = True  # set assimilation windows manually?
 
     # filter out runtime warnings which clog log files
     # (they are natural in the scipy.minimize call)
