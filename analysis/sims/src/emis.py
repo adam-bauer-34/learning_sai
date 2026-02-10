@@ -79,8 +79,11 @@ class EmissionsBaseline():
 
         # get current working directory and set path
         cwd = os.getcwd()
-        EMIS_DATA_PATH = cwd + '/model/data/input/rcmip_emissions_data.csv'
-        CONC_DATA_PATH = cwd + '/model/data/input/rcmip_conc_data.csv'
+        # print(cwd)
+        EMIS_DATA_PATH = cwd + '/data/rcmip_emissions_data.csv'
+        CONC_DATA_PATH = cwd + '/data/rcmip_conc_data.csv'
+
+        # print(EMIS_DATA_PATH)
 
         # try to import data. if it doesn't exist, we accept a file not found
         # error, and download the file from Zenodo
@@ -171,15 +174,6 @@ class EmissionsBaseline():
                 tmp_df_vals = tmp_df.loc[:,
                                          str(self.t_min):str(self.t_max)].interpolate(axis=1).values[0]\
                                 * (1/1000.)
-            
-            # check if there are nans in this interpolated time series. if there are, shift the t_min window backwards
-            # by the number of nan years, reinterpolate, and subselect relevant years of data
-            if np.any(np.isnan(tmp_df_vals)):
-                print("Caught nans. Fixing...")
-                N_nans = len(np.where(np.isnan(tmp_df_vals))[0])
-                tmp_df_vals = tmp_df.loc[:,
-                                     str(self.t_min - N_nans):str(self.t_max)].interpolate(axis=1).values[0]
-                tmp_df_vals = tmp_df_vals[N_nans:]
 
             # save to dictionary of species
             self.emis[tmp_spec_trunc] = tmp_df_vals
@@ -203,17 +197,6 @@ class EmissionsBaseline():
             # over the NaNs in the selected time range linearly.
             tmp_df_vals = tmp_df.loc[:,
                                      str(self.t_min):str(self.t_max)].interpolate(axis=1).values[0]
-            print(tmp_df_vals)
-            
-            # check if there are nans in this interpolated time series. if there are, shift the t_min window backwards
-            # by the number of nan years, reinterpolate, and subselect relevant years of data
-            if np.any(np.isnan(tmp_df_vals)):
-                print("Caught nans. Fixing...")
-                N_nans = len(np.where(np.isnan(tmp_df_vals))[0])
-                tmp_df_vals = tmp_df.loc[:,
-                                     str(self.t_min - N_nans):str(self.t_max)].interpolate(axis=1).values[0]
-                tmp_df_vals = tmp_df_vals[N_nans:]
-
 
             # save to dictionary of species
             self.conc[tmp_spec_trunc] = tmp_df_vals
@@ -244,20 +227,20 @@ if __name__ == '__main__':
     # correctly
     import matplotlib.pyplot as plt
     from model.globals import FIGS_DIR
-    # plt.style.use('ambpy')
+    plt.style.use('ambpy')
 
     scenario = 'ssp245'
-    t_min = 2025
+    t_min = 2020
     t_max = 2100
     geo = True
     degs_per_dec = [0.0, 0.05, 0.1, 0.2]
     LAM = 4.58 * np.log(2) / 3.0  # feedback for ECS = 3.0
-    # print(LAM)
+    print(LAM)
     GAM = 0.7  # use central value
     EPS = 1.58  # use central value
     F_EFF_GEO = 0.09
-    ts = 2025
-    tf = 2075
+    ts = 2020
+    tf = 2070
     geo_ts_emis = []
     geo_ts_force = []
 
@@ -268,9 +251,6 @@ if __name__ == '__main__':
         geo_ts_emis.append(e.emis['geo'])
         geo_ts_force.append(e.forcing['geo'])
 
-    print(e.conc['CO2'], e.forcing['geo'])
-
-    """
     fig, ax = plt.subplots(1, 2, figsize=(14, 6))
 
     for i in range(len(degs_per_dec)):
@@ -284,4 +264,5 @@ if __name__ == '__main__':
     
     figpath = FIGS_DIR + 'checks/geo_emis.png'
     fig.savefig(figpath, dpi=400)
-    print("Emissions baseline check figure saved to:\n {}".format(figpath))"""
+    print("Emissions baseline check figure saved to:\n {}".format(figpath))
+

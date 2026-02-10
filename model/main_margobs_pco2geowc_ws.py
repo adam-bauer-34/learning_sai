@@ -51,12 +51,12 @@ if __name__ == '__main__':
 
     # raise ECS warning
     if ECS_TR != 3.0:
-        print("WARNING: Chaning ECS changes the global climate feedback, \lambda, not forcing sensitivity to CO2 concentrations.")
+        print("WARNING: Chaning ECS changes the forcing sensitivity to CO2 concentrations, NOT the feedback \lambda, to keep the prior on the SAI angle consistent between simulations.")
 
     # binary variables that are pre-set
     CHECK_TLM = False  # check the tangent linear model?
     CHECK_ADJ = False  # check the adjoint model and the cost function gradient?
-    MANUAL_WINDOWING = True  # set assimilation windows manually?
+    MANUAL_WINDOWING = False  # set assimilation windows manually?
 
     # filter out runtime warnings which clog log files
     # (they are natural in the scipy.minimize call)
@@ -87,11 +87,11 @@ if __name__ == '__main__':
     EPS_CEN = 1.58  # pattern effect
 
     # true parameters used to make observations
-    L_TR = F1_CO2_CEN * np.log(2) / ECS_TR  # sensitivity
+    L_TR = L_CEN  # sensitivity
     G_TR = 0.7  # layer transfer coefficient
     C1_TR = 8  # heat capacity of surface layer
     C2_TR = 100  # heat capacity of ocean layer
-    F1_CO2_TR = 4.58  # forcing from log term in CO2
+    F1_CO2_TR = L_TR * ECS_TR / np.log(2)  # forcing from log term in CO2
     EPS_TR = 1.58  # pattern effect
 
     F_EFF_GEO_TR = 0.09  # W / m2 per TgS / yr of geoengineering (forcing efficacy)
@@ -102,6 +102,8 @@ if __name__ == '__main__':
     df = pd.read_csv(DATA_DIR + '/input/regional_calibration_parameters.csv',
                      delimiter=',', header=0, index_col='THETA')
     
+    print(F1_CO2_CEN, F1_CO2_TR, ECS_TR, L_TR, L_CEN)
+
     # global temperature related parameters
     ALPHA_R1_CEN = df.ALPHA_R1_CEN[THETA]  # region 1 pattern scaling parameter (global T)
     ALPHA_R2_CEN = df.ALPHA_R2_CEN[THETA]  # region 2 pattern scaling parameter (global T)
@@ -122,7 +124,7 @@ if __name__ == '__main__':
 
     """WARM START MODULE.
     """
-    print("Warm starting model to get initial conditions for temperature, ocean heat content, and regional temperature...")
+    print("\n Warm starting model to get initial conditions for temperature, ocean heat content, and regional temperature...")
     # "warm start" model to get the central estimates of the initial conditions
     # for temperature in our start year
     e_ws = EmissionsBaseline(SCENARIO, 1850, TMIN)
@@ -177,7 +179,6 @@ if __name__ == '__main__':
 
     """ASSIMILATION MODULE
     """
-
     # dictionary to make datatree out of later
     datatree_dict = {}
 
