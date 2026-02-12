@@ -56,7 +56,7 @@ if __name__ == '__main__':
     # binary variables that are pre-set
     CHECK_TLM = False  # check the tangent linear model?
     CHECK_ADJ = False  # check the adjoint model and the cost function gradient?
-    MANUAL_WINDOWING = False  # set assimilation windows manually?
+    MANUAL_WINDOWING = True  # set assimilation windows manually?
 
     # filter out runtime warnings which clog log files
     # (they are natural in the scipy.minimize call)

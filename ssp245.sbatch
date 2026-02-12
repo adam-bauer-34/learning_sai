@@ -9,8 +9,8 @@
 
 #SBATCH --time=24:00:00
 
-#SBATCH --nodes=4
-#SBATCH --ntasks-per-node=24
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
 #SBATCH --mem-per-cpu=4000
 
 #SBATCH --mail-type=ALL
@@ -45,12 +45,12 @@ source activate /project/bbcael/ambauer/learning_sai/.env
 # python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 18 2.0 0.1 50 1 500 1 
 # python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 25 2.0 0.1 50 1 500 1 
 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 9 3.0 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 12 3.0 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 14 3.0 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 17 3.0 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 21 3.0 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 33 3.0 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 9 3.0 0.1 50 1 1000 1 
+python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 12 3.0 0.1 50 1 1000 1 
+python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 14 3.0 0.1 50 1 1000 1 
+python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 17 3.0 0.1 50 1 1000 1 
+python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 21 3.0 0.1 50 1 1000 1 
+python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 33 3.0 0.1 50 1 1000 1 
 
 # python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 10 4.5 0.1 50 1 500 1 
 # python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 18 4.5 0.1 50 1 500 1 
