@@ -203,7 +203,7 @@ class EmissionsBaseline():
             # over the NaNs in the selected time range linearly.
             tmp_df_vals = tmp_df.loc[:,
                                      str(self.t_min):str(self.t_max)].interpolate(axis=1).values[0]
-            print(tmp_df_vals)
+            # print(tmp_df_vals)
             
             # check if there are nans in this interpolated time series. if there are, shift the t_min window backwards
             # by the number of nan years, reinterpolate, and subselect relevant years of data
@@ -268,7 +268,7 @@ if __name__ == '__main__':
         geo_ts_emis.append(e.emis['geo'])
         geo_ts_force.append(e.forcing['geo'])
 
-    print(e.conc['CO2'], e.forcing['geo'])
+    # print(e.conc['CO2'], e.forcing['geo'])
 
     """
     fig, ax = plt.subplots(1, 2, figsize=(14, 6))

@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=ssp245-hiECS
-#SBATCH --output=logs/ssp245-hiECS.out
-#SBATCH --error=logs/ssp245-hiECS.err
+#SBATCH --job-name=ssp585-logeo-nn
+#SBATCH --output=logs/ssp585-logeo-nn.out
+#SBATCH --error=logs/ssp585-logeo-nn.err
 
 #SBATCH --account=pi-bbcael
 #SBATCH --partition=caslake
@@ -21,7 +21,7 @@
 mkdir -p logs
 
 # name and make the outfile
-OUTFILE = "logs/${SLURM_JOB_ID}.txt"
+OUTFILE="logs/${SLURM_JOB_ID}.txt"
 touch "${OUTFILE}"
 
 {
@@ -40,10 +40,10 @@ module load python/miniforge-25.3.0
 source activate /project/bbcael/ambauer/learning_sai/.env
 
 # run simulations
-# these are just the base model, standard config, with a higher ECS = 4.7 (95th percentile of Sherwood and Webb et al (2020))
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 9 4.7 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 12 4.7 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 14 4.7 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 17 4.7 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 21 4.7 0.1 50 1 500 1 
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 33 4.7 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc-nn_ws ssp585 2025 9 3.0 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc-nn_ws ssp585 2025 12 3.0 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc-nn_ws ssp585 2025 14 3.0 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc-nn_ws ssp585 2025 17 3.0 0.1 50 1 500 1 
+python -m model.main_margobs_pco2geowc-nn_ws ssp585 2025 21 3.0 0.1 50 1 500 1
+python -m model.main_margobs_pco2geowc-nn_ws ssp585 2025 33 3.0 0.1 50 1 500 1
+

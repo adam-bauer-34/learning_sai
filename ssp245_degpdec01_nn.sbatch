@@ -1,17 +1,17 @@
 #!/bin/bash
 
-#SBATCH --job-name=ssp245-nn
-#SBATCH --output=logs/ssp245-n.out
-#SBATCH --error=logs/ssp245-nn.err
+#SBATCH --job-name=ssp245-logeo-nn
+#SBATCH --output=logs/ssp245-logeo-nn.out
+#SBATCH --error=logs/ssp245-logeo-nn.err
 
 #SBATCH --account=pi-bbcael
 #SBATCH --partition=caslake
 
 #SBATCH --time=24:00:00
 
-#SBATCH --nodes=4
-#SBATCH --ntasks-per-node=24
-#SBATCH --mem-per-cpu=4000
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --mem-per-cpu=40000
 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=ambauer@rcc.uchicago.edu
@@ -21,7 +21,7 @@
 mkdir -p logs
 
 # name and make the outfile
-OUTFILE = "logs/${SLURM_JOB_ID}.txt"
+OUTFILE="logs/${SLURM_JOB_ID}.txt"
 touch "${OUTFILE}"
 
 {
@@ -40,18 +40,9 @@ module load python/miniforge-25.3.0
 source activate /project/bbcael/ambauer/learning_sai/.env
 
 # run simulations
-# for now, no ECS != 3.0 simulations, while i figure out beta calibrations for those
-# python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 10 2.0 0.1 50 1 500 1 
-# python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 18 2.0 0.1 50 1 500 1 
-# python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 25 2.0 0.1 50 1 500 1 
-
 python -m model.main_margobs_pco2geowc-nn_ws ssp245 2025 9 3.0 0.1 50 1 500 1 
 python -m model.main_margobs_pco2geowc-nn_ws ssp245 2025 12 3.0 0.1 50 1 500 1 
 python -m model.main_margobs_pco2geowc-nn_ws ssp245 2025 14 3.0 0.1 50 1 500 1 
 python -m model.main_margobs_pco2geowc-nn_ws ssp245 2025 17 3.0 0.1 50 1 500 1 
 python -m model.main_margobs_pco2geowc-nn_ws ssp245 2025 21 3.0 0.1 50 1 500 1
 python -m model.main_margobs_pco2geowc-nn_ws ssp245 2025 33 3.0 0.1 50 1 500 1
-
-# python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 10 4.5 0.1 50 1 500 1 
-# python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 18 4.5 0.1 50 1 500 1 
-# python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 25 4.5 0.1 50 1 500 1 

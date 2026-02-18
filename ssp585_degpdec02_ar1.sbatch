@@ -1,17 +1,17 @@
 #!/bin/bash
 
-#SBATCH --job-name=ssp245
-#SBATCH --output=logs/ssp245.out
-#SBATCH --error=logs/ssp245.err
+#SBATCH --job-name=ssp585-higeo-ar1
+#SBATCH --output=logs/ssp585-higeo-ar1.out
+#SBATCH --error=logs/ssp585-higeo-ar1.err
 
 #SBATCH --account=pi-bbcael
 #SBATCH --partition=caslake
 
 #SBATCH --time=24:00:00
 
-#SBATCH --nodes=4
-#SBATCH --ntasks-per-node=24
-#SBATCH --mem-per-cpu=4000
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --mem-per-cpu=40000
 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=ambauer@rcc.uchicago.edu
@@ -40,4 +40,10 @@ module load python/miniforge-25.3.0
 source activate /project/bbcael/ambauer/learning_sai/.env
 
 # run simulations
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 1 10 2.0 0.1 50 1 2 1 
+python -m model.main_margobs_pco2geowc_ws ssp585 2025 1 9 3.0 0.2 50 1 500 1 
+python -m model.main_margobs_pco2geowc_ws ssp585 2025 1 12 3.0 0.2 50 1 500 1 
+python -m model.main_margobs_pco2geowc_ws ssp585 2025 1 14 3.0 0.2 50 1 500 1 
+python -m model.main_margobs_pco2geowc_ws ssp585 2025 1 17 3.0 0.2 50 1 500 1 
+python -m model.main_margobs_pco2geowc_ws ssp585 2025 1 21 3.0 0.2 50 1 500 1 
+python -m model.main_margobs_pco2geowc_ws ssp585 2025 1 33 3.0 0.2 50 1 500 1 
+
