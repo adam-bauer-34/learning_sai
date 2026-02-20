@@ -29,7 +29,7 @@ from dask.distributed import Client, LocalCluster
 from datatree import DataTree
 from model import DATA_DIR
 
-# from pympler import asizeof  # optional, include if needed / debugging
+from pympler import asizeof  # optional, include if needed / debugging
 
 def start_dask():
     # Slurm sets the SLURM_CPUS_PER_TASK variable
@@ -361,6 +361,19 @@ if __name__ == "__main__":
                                            inv_covar_Q_obs, inv_covar_T_R1_obs,
                                            inv_covar_T_R2_obs, obs, times)
                             for theta_p in theta_prior]
+
+        m = ensemble_members[0]
+
+        print("Python object overhead:", sys.getsizeof(m) / 1e6, "MB")
+
+        total = 0
+        for v in vars(m).values():
+            if hasattr(v, "nbytes"):
+                total += v.nbytes
+            else:
+                total += sys.getsizeof(v)
+
+        print("Estimated total size:", total / 1e6, "MB")
         
         #for i, ee in enumerate(ensemble_members):
         #    print(i, asizeof.asizeof(ee) / 1e6, " MB")

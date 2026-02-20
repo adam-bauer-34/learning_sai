@@ -242,6 +242,8 @@ class EmissionsBaseline():
 if __name__ == '__main__':
     # small test script to verify geoengineering forcing is being generated
     # correctly
+    import sys 
+    from pympler import asizeof
     import matplotlib.pyplot as plt
     from model.globals import FIGS_DIR
     # plt.style.use('ambpy')
@@ -250,7 +252,7 @@ if __name__ == '__main__':
     t_min = 2025
     t_max = 2100
     geo = True
-    degs_per_dec = [0.0, 0.05, 0.1, 0.2]
+    degs_per_dec = [0.0, 0.5]
     LAM = 4.58 * np.log(2) / 3.0  # feedback for ECS = 3.0
     # print(LAM)
     GAM = 0.7  # use central value
@@ -267,6 +269,8 @@ if __name__ == '__main__':
                     T_START=ts, T_END=tf)
         geo_ts_emis.append(e.emis['geo'])
         geo_ts_force.append(e.forcing['geo'])
+
+    print(asizeof.asizeof(e))
 
     # print(e.conc['CO2'], e.forcing['geo'])
 
