@@ -70,9 +70,9 @@ if __name__ == "__main__":
         print("WARNING: Chaning ECS changes the forcing sensitivity to CO2 concentrations, NOT the feedback \lambda, to keep the prior on the SAI angle consistent between simulations.")
 
     # binary variables that are pre-set
-    CHECK_TLM = False  # check the tangent linear model?
-    CHECK_ADJ = False  # check the adjoint model and the cost function gradient?
-    MANUAL_WINDOWING = True  # set assimilation windows manually?
+    CHECK_TLM = True  # check the tangent linear model?
+    CHECK_ADJ = True  # check the adjoint model and the cost function gradient?
+    MANUAL_WINDOWING = False  # set assimilation windows manually?
 
     # filter out runtime warnings which clog log files
     # (they are natural in the scipy.minimize call)
@@ -237,8 +237,11 @@ if __name__ == "__main__":
         # note stds of priors and obs
         OBS_T1_STD = 1.0  # observation noise in measuring T1/T2
         OBS_Q_STD = 1.0  # observation noise in measuring ocean heat content
-        OBS_T_R1_STD = 1.0  # observation noise in measuring regional temperature in R1
-        OBS_T_R2_STD = 1.0  # observation noise in measuring regional temperature in R2
+
+        # adding variability in regional temperatures
+        # this is meant to be in addition to global noise (we already treat model errors that are global)
+        OBS_T_R1_STD = 0.35  # observation noise in measuring regional temperature in R1
+        OBS_T_R2_STD = 0.3  # observation noise in measuring regional temperature in R2
 
         T_IC_STD = 0.2  # initial condition std for t1 and t2 (roughly the size of internal variability)
         EPS_STD = 0.128  # pattern effect standard deviation (cummins, 2020)
@@ -276,6 +279,14 @@ if __name__ == "__main__":
         inv_covar_Q_obs = get_covar_white(np.array([OBS_Q_STD] *
                                                    len(times)), len(times),
                                           inv=True)
+        
+        covar_T_R1_obs = get_covar_white(np.array([OBS_T_R1_STD] *
+                                                   len(times)), len(times),
+                                            inv=True)
+        
+        covar_T_R2_obs = get_covar_white(np.array([OBS_T_R2_STD] *
+                                                   len(times)), len(times),
+                                            inv=False)
 
         inv_covar_T_R1_obs = get_covar_white(np.array([OBS_T_R1_STD] *
                                                    len(times)), len(times),
@@ -286,7 +297,11 @@ if __name__ == "__main__":
                                             inv=True)
 
         # make observations from true data
-        obs = get_obs_from_dynamics(data_tr_p)
+        obs = get_obs_from_dynamics(data_tr_p, noise=True,
+                                    noise_params=[(None, None),  # no noise here for T1, handled with model errors
+                                                  (None, None),  # no noise for Q, handled with model errors
+                                                  (0.0, covar_T_R1_obs),  # noise for region 1
+                                                  (0.0, covar_T_R2_obs)])  # noise for region 2
 
         # -----------------------------------------------
         # If desired, check tangent linear model accuracy
@@ -364,7 +379,7 @@ if __name__ == "__main__":
 
         m = ensemble_members[0]
 
-        print("Python object overhead:", sys.getsizeof(m) / 1e6, "MB")
+        # print("Python object overhead:", sys.getsizeof(m) / 1e6, "MB")
 
         total = 0
         for v in vars(m).values():
@@ -373,7 +388,7 @@ if __name__ == "__main__":
             else:
                 total += sys.getsizeof(v)
 
-        print("Estimated total size:", total / 1e6, "MB")
+        # print("Estimated total size:", total / 1e6, "MB")
         
         #for i, ee in enumerate(ensemble_members):
         #    print(i, asizeof.asizeof(ee) / 1e6, " MB")
@@ -452,7 +467,9 @@ if __name__ == "__main__":
                                'ECS': ECS_TR,
                                'ANGLE': THETA,
                                'assim_tmax': tmax_assims,
-                               'internal_variability_std': INT_VAR_STD})
+                               'internal_variability_std': INT_VAR_STD,
+                               'obs_T_R1_std': OBS_T_R1_STD,
+                               'obs_T_R2_std': OBS_T_R2_STD})
 
         datatree_dict[str(TMAX)] = ds
 
@@ -465,7 +482,7 @@ if __name__ == "__main__":
             path = DATA_DIR + '/output/' + sim_type\
                 + '/margobs_ws_'\
                 + SCENARIO + "_"\
-                + sim_type + "_"\
+                + sim_type + "+noise_"\
                 + "TMIN" + str(TMIN) + "_"\
                 + "AR" + str(AR_P) + "_"\
                 + "THETA" + str(THETA) + "_"\
@@ -478,7 +495,7 @@ if __name__ == "__main__":
             path = DATA_DIR + '/output/' + sim_type\
                 + '/margobs_ws_'\
                 + SCENARIO + "_"\
-                + sim_type + "_"\
+                + sim_type + "+noise_"\
                 + "TMIN" + str(TMIN) + "_"\
                 + "AR" + str(AR_P) + "_"\
                 + "THETA" + str(THETA) + "_"\
@@ -495,4 +512,7 @@ if __name__ == "__main__":
 
     else:
         print(dt)
+        print("Summary stats:")
+        print(f"L2 norms: {dt['2100'].l2s.mean().values} +/- {dt['2100'].l2s.std().values}")
+        print(f"Costs: {dt['2100'].costs.mean().values} +/- {dt['2100'].costs.std().values}")
     

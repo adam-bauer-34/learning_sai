@@ -71,7 +71,7 @@ def cost(control, args):
                         + (T_R2_obs_p - T_R2_d).T @ inv_covar_T_R2 @ (T_R2_obs_p - T_R2_d))
 
     cost = init_piece + data_piece
-    return cost
+    return cost * 0.3**2
 
 
 def grad(control, args):
@@ -105,4 +105,4 @@ def grad(control, args):
     # gradient is the sum of init_piece and obs_piece
     grad = init_piece + obs_piece
 
-    return grad
+    return grad * 0.3**2
