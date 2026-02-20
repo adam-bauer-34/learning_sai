@@ -28,7 +28,7 @@ class EmissionsBaseline():
 
     def __init__(self, scenario, t_min, t_max,
                  geo=False, DEG_PER_DEC=0.1, LAMBDA=1.0, GAMMA=0.7, EPSILON=1.58, F_EFF_GEO=0.0,
-                 T_START=2020, T_END=2070):
+                 T_START=2020, T_END=2070, silent=True):
         self.scenario = scenario
         self.geo = geo  # whether or not this class should have geoengineering attributes
         self.DEG_PER_DEC = DEG_PER_DEC  # degrees C offset by geo per decade
@@ -65,13 +65,14 @@ class EmissionsBaseline():
             self.emis['geo'] = np.zeros_like(self.times_ext)  # no geoengineering
             self.forcing['geo'] = np.zeros_like(self.times_ext)  # no geo
 
-        print("\n------------------------------------------------------------------")
-        print("Emissions baseline for scenario {} created successfully.".format(self.scenario))
-        if self.geo:
-            print("This scenario has geoengineering beginning in {} that offsets {} deg C per decade".format(self.T_START, self.DEG_PER_DEC))
-        else:
-            print("This scenario does not include geoengineering.")
-        print("------------------------------------------------------------------\n")
+        if not silent:
+            print("\n------------------------------------------------------------------")
+            print("Emissions baseline for scenario {} created successfully.".format(self.scenario))
+            if self.geo:
+                print("This scenario has geoengineering beginning in {} that offsets {} deg C per decade".format(self.T_START, self.DEG_PER_DEC))
+            else:
+                print("This scenario does not include geoengineering.")
+            print("------------------------------------------------------------------\n")
 
     def _import_emissions_timeseries(self):
         """Import time series of emissions for each gas species.

@@ -9,9 +9,9 @@
 
 #SBATCH --time=24:00:00
 
-#SBATCH --nodes=4
-#SBATCH --ntasks-per-node=24
-#SBATCH --mem-per-cpu=4000
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --mem-per-cpu=20000
 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=ambauer@rcc.uchicago.edu

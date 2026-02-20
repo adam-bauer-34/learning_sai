@@ -25,16 +25,32 @@ from model.src.pco2geowc3.parallelization import EnsembleMember, runner_4dvar
 from model.src.pco2geowc3.model_errors import gen_noise_ts
 from model.src.stats.covar import get_covar_white
 from model.src.stats.draws import get_prior_draws
-from dask.distributed import Client
+from dask.distributed import Client, LocalCluster
 from datatree import DataTree
 from model import DATA_DIR
 
 # from pympler import asizeof  # optional, include if needed / debugging
 
+def start_dask():
+    # Slurm sets the SLURM_CPUS_PER_TASK variable
+    # We use this to tell Dask exactly how many workers to start
+    cpus_available = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))
+    
+    # Initialize a cluster that matches the Slurm allocation
+    cluster = LocalCluster(
+        n_workers=cpus_available, 
+        threads_per_worker=1, # 1 thread per worker is best for heavy math
+        memory_limit='auto',
+        processes=True
+    )
+    client = Client(cluster)
+    
+    print(f"Dask Client started with {cpus_available} workers.")
+    print(f"Dashboard link: {client.dashboard_link}")
+    return client
 
-if __name__ == '__main__':
-    # initiate DASK client
-    c = Client()
+if __name__ == "__main__":
+    c = start_dask()
     print(c)
 
     # parse command line stuff
