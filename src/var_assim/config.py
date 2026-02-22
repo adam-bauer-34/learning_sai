@@ -19,6 +19,9 @@ DATA_DIR = Path(CONFIG["DATA_DIR"])
 FIGS_DIR = Path(CONFIG["FIGS_DIR"])
 
 def parse_args():
+    """Parse command line arguments for each experiment.
+    """
+
     parser = argparse.ArgumentParser(
         description="Estimating future climate uncertainty using pseudo-observations and ensemble variational data assimilation."
     )
@@ -94,7 +97,7 @@ def parse_args():
     return parser.parse_args()
 
 
-# quick tester of intuition
+# quick test
 if __name__ == "__main__":
     args = parse_args()
     print(args)
