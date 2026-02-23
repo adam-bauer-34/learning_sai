@@ -282,7 +282,7 @@ if __name__ == "__main__":
         
         covar_T_R1_obs = get_covar_white(np.array([OBS_T_R1_STD] *
                                                    len(times)), len(times),
-                                            inv=True)
+                                            inv=False)
         
         covar_T_R2_obs = get_covar_white(np.array([OBS_T_R2_STD] *
                                                    len(times)), len(times),
