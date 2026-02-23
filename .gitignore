@@ -1,8 +1,9 @@
 cmip6_data/
-.env/
 logs/
 __pycache__/
 .DS_Store
 testing/
 batchers/
 no_array_sbatchs/
+data/
+.env/

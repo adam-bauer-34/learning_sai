@@ -26,6 +26,14 @@ def parse_args():
         description="Estimating future climate uncertainty using pseudo-observations and ensemble variational data assimilation."
     )
 
+    # model (must have this argument to avoid mix ups)
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="pco2geowc",
+        required=True
+    )
+
     # emissions scenario
     parser.add_argument(
         "--scenario",
