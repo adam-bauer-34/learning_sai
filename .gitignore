@@ -6,3 +6,4 @@ __pycache__/
 testing/
 batchers/
 no_array_sbatchs/
+data/
