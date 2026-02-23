@@ -64,14 +64,15 @@ if __name__ == "__main__":
     N_windows = int(sys.argv[8])
     N_ENS = int(sys.argv[9])
     SAVE_OUTPUT = int(sys.argv[10])
+    REG_NOISE = int(sys.argv[11]) if len(sys.argv) > 11 else 0  # default to no regional noise if not specified
 
     # raise ECS warning
     if ECS_TR != 3.0:
         print("WARNING: Chaning ECS changes the forcing sensitivity to CO2 concentrations, NOT the feedback \lambda, to keep the prior on the SAI angle consistent between simulations.")
 
     # binary variables that are pre-set
-    CHECK_TLM = True  # check the tangent linear model?
-    CHECK_ADJ = True  # check the adjoint model and the cost function gradient?
+    CHECK_TLM = False  # check the tangent linear model?
+    CHECK_ADJ = False  # check the adjoint model and the cost function gradient?
     MANUAL_WINDOWING = False  # set assimilation windows manually?
 
     # filter out runtime warnings which clog log files
@@ -238,19 +239,28 @@ if __name__ == "__main__":
         OBS_T1_STD = 1.0  # observation noise in measuring T1/T2
         OBS_Q_STD = 1.0  # observation noise in measuring ocean heat content
 
-        # adding variability in regional temperatures
-        # this is meant to be in addition to global noise (we already treat model errors that are global)
-        OBS_T_R1_STD = 0.35  # observation noise in measuring regional temperature in R1
-        OBS_T_R2_STD = 0.3  # observation noise in measuring regional temperature in R2
-
+        # add standard errors for other priors
         T_IC_STD = 0.2  # initial condition std for t1 and t2 (roughly the size of internal variability)
         EPS_STD = 0.128  # pattern effect standard deviation (cummins, 2020)
         F1_STD = 0.519   # f1_co2 std, from zelinka et al. (2020)
         PRIOR_STD_FACTOR = 0.3  # implies X% std for prior for other less constrained parameters
 
         Q_STD = C1_TR * T_IC_STD + C2_TR * T_IC_STD  # std for OHC
-        T_R1_STD = ALPHA_R1_TR * T_IC_STD  # std for temp in r1
-        T_R2_STD = ALPHA_R2_TR * T_IC_STD  # std for temp in r2
+
+        # adding variability in regional temperatures
+        # this is meant to be in addition to global noise (we already treat model errors that are global)
+        if REG_NOISE:
+            OBS_T_R1_STD = 0.35  # observation noise in measuring regional temperature in R1
+            OBS_T_R2_STD = 0.3  # observation noise in measuring regional temperature in R2
+            T_R1_STD = ALPHA_R1_TR * T_IC_STD + OBS_T_R1_STD # std for temp in r1
+            T_R2_STD = ALPHA_R2_TR * T_IC_STD + OBS_T_R2_STD # std for temp in r2
+        
+        else:
+            # no regional noise (sets covariance matrices to identity)
+            OBS_T_R1_STD = 1.0 
+            OBS_T_R2_STD = 1.0
+            T_R1_STD = ALPHA_R1_TR * T_IC_STD  # std for temp in r1
+            T_R2_STD = ALPHA_R2_TR * T_IC_STD  # std for temp in r2
         
         # make prior stds vector
         prior_stds = np.hstack([np.array([T_IC_STD, T_IC_STD,
@@ -296,12 +306,17 @@ if __name__ == "__main__":
                                                    len(times)), len(times),
                                             inv=True)
 
-        # make observations from true data
-        obs = get_obs_from_dynamics(data_tr_p, noise=True,
-                                    noise_params=[(None, None),  # no noise here for T1, handled with model errors
-                                                  (None, None),  # no noise for Q, handled with model errors
-                                                  (0.0, covar_T_R1_obs),  # noise for region 1
-                                                  (0.0, covar_T_R2_obs)])  # noise for region 2
+        if REG_NOISE:
+            # make observations from true data
+            obs = get_obs_from_dynamics(data_tr_p, noise=True,
+                                        noise_params=[(None, None),  # no noise here for T1, handled with model errors
+                                                    (None, None),  # no noise for Q, handled with model errors
+                                                    (0.0, covar_T_R1_obs),  # noise for region 1
+                                                    (0.0, covar_T_R2_obs)])  # noise for region 2
+
+        else:
+            # no regional noise, just global internal variability
+            obs = get_obs_from_dynamics(data_tr_p, noise=False)
 
         # -----------------------------------------------
         # If desired, check tangent linear model accuracy
@@ -477,12 +492,19 @@ if __name__ == "__main__":
 
     if SAVE_OUTPUT:
         # get current directory and save
-        sim_type = 'pco2geowc'
+        sim_dir = 'pco2geowc'
+
+        if REG_NOISE:
+            sim_type = 'pco2geowc+noise'
+
+        else:
+            sim_type = 'pco2geowc'
+
         if not MANUAL_WINDOWING:
-            path = DATA_DIR + '/output/' + sim_type\
+            path = DATA_DIR + '/output/' + sim_dir\
                 + '/margobs_ws_'\
                 + SCENARIO + "_"\
-                + sim_type + "+noise_"\
+                + sim_type + "_"\
                 + "TMIN" + str(TMIN) + "_"\
                 + "AR" + str(AR_P) + "_"\
                 + "THETA" + str(THETA) + "_"\
@@ -492,10 +514,10 @@ if __name__ == "__main__":
                 + "Nwinds" + str(N_windows) + "_"\
                 + "Nens" + str(N_ENS) + ".nc"
         else:
-            path = DATA_DIR + '/output/' + sim_type\
+            path = DATA_DIR + '/output/' + sim_dir\
                 + '/margobs_ws_'\
                 + SCENARIO + "_"\
-                + sim_type + "+noise_"\
+                + sim_type + "_"\
                 + "TMIN" + str(TMIN) + "_"\
                 + "AR" + str(AR_P) + "_"\
                 + "THETA" + str(THETA) + "_"\
