@@ -10,48 +10,33 @@ To run:
 """
 
 import sys
-import os
 import time
 import warnings 
+
+# filter out runtime warnings which clog log files
+# (they are natural in the scipy.minimize call)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 import numpy as np
 import xarray as xr
 
-from model.src.emis import EmissionsBaseline
-from model.src.pco2geowc.dynamics import get_nonlin_path
-from model.src.pco2geowc.checks import *
-from model.src.pco2geowc.obs import get_obs_from_dynamics
-from model.src.pco2geowc.parallelization import EnsembleMember, runner_4dvar
-from model.src.pco2geowc.model_errors import gen_noise_ts
-from model.src.stats.covar import get_covar_white
-from model.src.stats.draws import get_prior_draws
-from dask.distributed import Client, LocalCluster
-from datatree import DataTree
-from model import DATA_DIR
+from var_assim.dask_setup import start_dask
+from var_assim.emis import EmissionsBaseline 
+from var_assim.tlm_adj_checks import *
+from var_assim.model_errors import gen_noise_ts
+from var_assim.pproc_saving import process_output, save_output
+from var_assim.stats.covar import get_covar_white
+from var_assim.stats.draws import get_prior_draws
 
-from pympler import asizeof  # optional, include if needed / debugging
+from var_assim.models.pco2geowc.dynamics import get_nonlin_path
+from var_assim.models.pco2geowc.obs import get_obs_from_dynamics
+from var_assim.models.pco2geowc.parallelization import EnsembleMember, runner_4dvar
 
-def start_dask():
-    # Slurm sets the SLURM_CPUS_PER_TASK variable
-    # We use this to tell Dask exactly how many workers to start
-    cpus_available = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))
-    
-    # Initialize a cluster that matches the Slurm allocation
-    cluster = LocalCluster(
-        n_workers=cpus_available, 
-        threads_per_worker=1, # 1 thread per worker is best for heavy math
-        memory_limit='auto',
-        processes=True
-    )
-    client = Client(cluster)
-    
-    print(f"Dask Client started with {cpus_available} workers.")
-    print(f"Dashboard link: {client.dashboard_link}")
-    return client
 
-if __name__ == "__main__":
-    c = start_dask()
-    print(c)
+def run_var_assim_experiment(args, logger, cal)
+    # start dask
+    c = start_dask(logger)
+    logger.info(c)
 
     # parse command line stuff
     SCENARIO = sys.argv[1]
@@ -73,10 +58,6 @@ if __name__ == "__main__":
     CHECK_TLM = False  # check the tangent linear model?
     CHECK_ADJ = False  # check the adjoint model and the cost function gradient?
     MANUAL_WINDOWING = True  # set assimilation windows manually?
-
-    # filter out runtime warnings which clog log files
-    # (they are natural in the scipy.minimize call)
-    warnings.filterwarnings("ignore", category=RuntimeWarning)
 
     # ----------------------------------------
     # Initialize the problem

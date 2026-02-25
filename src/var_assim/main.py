@@ -13,6 +13,7 @@ from var_assim.models import MODEL_REGISTRY
 
 
 def main():
+    # parse arguments and setup logging
     args = parse_args()
     logger = setup_logger(args.debug)
 
@@ -21,6 +22,7 @@ def main():
     logger.info(f"Git hash: {get_git_hash()}")
     logger.info(f"Running experiment with config: {args}")
 
+    # run variational data assimilation experiment with passed model
     try:
         run_var_assim_experiment = MODEL_REGISTRY[args.model]
     except KeyError:
@@ -30,9 +32,9 @@ def main():
 
     t1 = time.time()
 
+    # log finish
     logger.info("Experiment complete.")
     logger.info(f"Total runtime: {t1 - t0:.2f}s.")
-
 
 if __name__ == "__main__":
     main()
