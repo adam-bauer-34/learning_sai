@@ -6,4 +6,13 @@ testing/
 batchers/
 no_array_sbatchs/
 data/
+
+# environments
 .env/
+.old_env/
+
+# build information
+*.egg-info
+*.egg
+build/
+dist/

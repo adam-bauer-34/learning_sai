@@ -7,19 +7,24 @@ Feb 2026
 
 import time
 
-from config import parse_args, import_model_runner
-from logging_utils import setup_logger, get_git_hash
+from var_assim.config import parse_args
+from var_assim.logging_utils import setup_logger, get_git_hash
+from var_assim.models import MODEL_REGISTRY
 
 
 def main():
     args = parse_args()
     logger = setup_logger(args.debug)
-    run_var_assim_experiment = import_model_runner(args.model)
 
     t0 = time.time()
 
     logger.info(f"Git hash: {get_git_hash()}")
     logger.info(f"Running experiment with config: {args}")
+
+    try:
+        run_var_assim_experiment = MODEL_REGISTRY[args.model]
+    except KeyError:
+        raise ValueError(f"Model {args.model} doesn't exist in model registry:\n{MODEL_REGISTRY}")
 
     run_var_assim_experiment(args, logger)
 

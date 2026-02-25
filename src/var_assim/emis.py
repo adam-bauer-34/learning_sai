@@ -5,11 +5,13 @@ University of Illinois Urbana-Champaign
 5.21.2024
 """
 
-import os
 import pooch
 
 import numpy as np
 import pandas as pd 
+
+from var_assim.config import DATA_DIR
+
 
 class EmissionsBaseline():
     """Emissions baseline class.
@@ -78,9 +80,8 @@ class EmissionsBaseline():
         """
 
         # get current working directory and set path
-        cwd = os.getcwd()
-        EMIS_DATA_PATH = cwd + '/model/data/input/rcmip_emissions_data.csv'
-        CONC_DATA_PATH = cwd + '/model/data/input/rcmip_conc_data.csv'
+        EMIS_DATA_PATH = DATA_DIR / 'input' / 'rcmip_emissions_data.csv'
+        CONC_DATA_PATH = DATA_DIR / 'input' / 'rcmip_conc_data.csv'
 
         # try to import data. if it doesn't exist, we accept a file not found
         # error, and download the file from Zenodo
