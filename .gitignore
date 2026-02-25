@@ -7,3 +7,4 @@ batchers/
 no_array_sbatchs/
 data/
 .env/
+.old_env/
