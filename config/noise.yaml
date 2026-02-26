@@ -1,0 +1,15 @@
+noise_model:
+  AR1:
+    INT_VAR_STD: 0.27  # from Proistosescu and Huybers (2017)
+    AUTO_CORR: 0.2  # same as above
+  
+  AR0:
+    INT_VAR_STD: 0.27  # from Proistosescu and Huybers (2017)
+    AUTO_CORR: 0.0  # no autocorrelation if AR0 noise model
+
+  Regional:
+    OBS_T1_STD: 1.0  # no observation noise in global temp
+    OBS_Q_STD: 1.0  # no observation noise in OHC
+    OBS_T_R1_STD: 0.35  # obs noise in region 1
+    OBS_T_R2_STD: 0.3  # obs noise in region 2
+    OBS_T_R3_STD: 0.25  # obs noise in region 3

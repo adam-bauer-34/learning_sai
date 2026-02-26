@@ -1,0 +1,61 @@
+global:
+  ECS_TR: 3.0
+  L_TR: None  # set by ECS_TR and F1_CO2_TR on initialization
+  G_TR: 0.7
+  C1_TR: 8.0
+  C2_TR: 100
+  F1_CO2_TR: 4.58
+  EPS_TR: 1.58
+  F_EFF_GEO_TR: 0.09
+
+  # dummy warm start attributes (will be overridden later)
+  T1_TR: None
+  T2_TR: None
+  Q_TR: None
+  T_R1_TR: None
+  T_R2_TR: None
+  T_R3_TR: None
+
+theta:
+  9:
+    ALPHA_R1_TR: 2.0
+    ALPHA_R2_TR: 1.3
+    ALPHA_R3_TR: 1.5
+    BETA_R1_TR: 0.018
+    BETA_R2_TR: -0.0053
+    BETA_R3_TR: 0.0153
+  12:
+    ALPHA_R1_TR: 2.0
+    ALPHA_R2_TR: 1.3
+    ALPHA_R3_TR: 1.5
+    BETA_R1_TR: 0.018
+    BETA_R2_TR: -0.0121
+    BETA_R3_TR: 0.0153
+  14:
+    ALPHA_R1_TR: 2.0
+    ALPHA_R2_TR: 1.3
+    ALPHA_R3_TR: 1.5
+    BETA_R1_TR: 0.018
+    BETA_R2_TR: -0.018
+    BETA_R3_TR: 0.0153
+  17:
+    ALPHA_R1_TR: 2.0
+    ALPHA_R2_TR: 1.3
+    ALPHA_R3_TR: 1.5
+    BETA_R1_TR: 0.018
+    BETA_R2_TR: -0.025
+    BETA_R3_TR: 0.0153
+  21:
+    ALPHA_R1_TR: 2.0
+    ALPHA_R2_TR: 1.3
+    ALPHA_R3_TR: 1.5
+    BETA_R1_TR: 0.025
+    BETA_R2_TR: -0.0305
+    BETA_R3_TR: 0.0153
+  33:
+    ALPHA_R1_TR: 2.0
+    ALPHA_R2_TR: 1.3
+    ALPHA_R3_TR: 1.5
+    BETA_R1_TR: 0.03825
+    BETA_R2_TR: -0.0387
+    BETA_R3_TR: 0.0351

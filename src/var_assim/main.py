@@ -7,12 +7,18 @@ Feb 2026
 
 import time
 
-from var_assim.config import parse_args
+from var_assim.config import parse_args, TRUTH_PATH, PRIOR_PATH, NOISE_PATH
 from var_assim.logging_utils import setup_logger, get_git_hash
 from var_assim.models import MODEL_REGISTRY
+from var_assim.calibration.truth import ClimateModelTruth
+from var_assim.calibration.priors import ClimateModelPriors
+from var_assim.calibration.noise import ClimateModelNoise
 
 
 def main():
+    """Main function for simulation setup and running.
+    """
+
     # parse arguments and setup logging
     args = parse_args()
     logger = setup_logger(args.debug)
@@ -22,13 +28,18 @@ def main():
     logger.info(f"Git hash: {get_git_hash()}")
     logger.info(f"Running experiment with config: {args}")
 
+    # setup prior, truth, and noise dataclasses from config and arguments
+    Priors = ClimateModelPriors.from_yaml(PRIOR_PATH)
+    Truth = ClimateModelTruth.from_cli_and_yaml(args, TRUTH_PATH)
+    Noise = ClimateModelNoise.from_cli_and_yaml(args, NOISE_PATH)
+
     # run variational data assimilation experiment with passed model
     try:
         run_var_assim_experiment = MODEL_REGISTRY[args.model]
     except KeyError:
         raise ValueError(f"Model {args.model} doesn't exist in model registry:\n{MODEL_REGISTRY}")
 
-    run_var_assim_experiment(args, logger)
+    run_var_assim_experiment(logger, args, Priors, Truth, Noise)
 
     t1 = time.time()
 
