@@ -10,23 +10,16 @@ import numpy as np
 from var_assim.stats.covar import get_covar_white, get_covar_ar1
 
 
-def gen_noise_ts(AR_P, N_times, STD, CORR_COEFFS=None):
+def gen_noise_ts(Noise, N_times):
     """Generate a time series of model errors to force the model.
 
     Parameters
     ----------
-    AR_P: int
-        the "P" in AR(P) process. tells the code what type of forcing
+    Noise: `ClimateModelNoise` dataclass
+        contains all the noise attributes for our model
 
     N_times: int
         number of time steps we have; tells code how long of a vector to return
-
-    STD: float
-        standard deviation of Gaussian white noise that forces AR(P) process
-
-    CORR_COEFF: (AR_P,) list
-        Default: None
-        correlation coefficients for AR(P) process
 
     Returns
     -------
@@ -37,15 +30,15 @@ def gen_noise_ts(AR_P, N_times, STD, CORR_COEFFS=None):
         model error covariance matrix
     """
 
-    if AR_P == 0:
-        model_error_covar = get_covar_white(np.array([STD] * N_times),
+    if Noise.NOISE_MODEL == 'AR0':
+        model_error_covar = get_covar_white(np.array([Noise.INT_VAR_STD] * N_times),
                                             N_times)
 
-    elif AR_P == 1:
-        model_error_covar = get_covar_ar1(STD, CORR_COEFFS[0], N_times)
+    elif Noise.NOISE_MODEL == 'AR1':
+        model_error_covar = get_covar_ar1(Noise.INT_VAR_STD, Noise.AUTO_CORR, N_times)
 
     else:
-        raise ValueError("Invalid noise model. Only AR(0) and AR(1) are currently implemented")
+        raise ValueError("Invalid noise model. Only AR(0) and AR(1) are currently implemented.")
 
     model_errors = np.random.multivariate_normal(np.array([0.0] * N_times),
                                                  model_error_covar)
