@@ -5,14 +5,15 @@ UChicago
 Feb 2026
 """
 
-import numpy as np
-import pandas as pd
+import yaml
 
-from dataclasses import dataclass
-from var_assim.config import DATA_DIR
+import numpy as np
+
+from dataclasses import dataclass, fields
+
 
 @dataclass
-class Priors:
+class ClimateModelPriors:
     """Describes priors on all model parameters.
     """
 
@@ -20,7 +21,7 @@ class Priors:
     # global climate values
     ECS_CEN: float  # equilibrium climate sensitivity
     L_CEN: float  # climate feedback parameter
-    G_GEN: float  # layer transfer coefficient
+    G_CEN: float  # layer transfer coefficient
     C1_CEN: float  # heat capacity of surface layer
     C2_CEN: float  # heat capacity of ocean layer
     F1_CO2_CEN: float  # forcing from log term in CO2
@@ -38,6 +39,10 @@ class Priors:
     BETA_R3_CEN: float
 
     # Set standard deviations
+    # first set standard deviation factor for setting prior variances
+    PRIOR_STD_FACTOR: float 
+    factor_vars: list[tuple]
+
     # global parameters (no ECS bc distribution is skewed)
     G_STD: float
     L_STD: float
@@ -80,12 +85,49 @@ class Priors:
     T_R3_CEN: float 
     T_R3_STD: float
 
-
     @classmethod
-    def from_yaml(cls, yaml_path):
-        pass
+    def from_yaml(cls, prior_cal_path: str) -> 'ClimateModelPriors':
+        """Create a Priors object from a .yaml file.
+        
+        Parameters
+        ----------
+        prior_cal_path: str
+            path to prior data
+
+        Returns
+        -------
+        cls: Priors
+            Priors object
+        """
+
+        # load the yaml file
+        with open(prior_cal_path, 'r') as f:
+            prior_data = yaml.safe_load(f)
+
+        all_dc_fields = {f.name for f in fields(cls)}
+        yaml_matched_fields = {k: v for k, v in prior_data['priors'].items() if k in all_dc_fields}
+
+        # set climate feedback based on ECS and forcing
+        yaml_matched_fields['L_CEN'] = yaml_matched_fields['F1_CO2_CEN'] * np.log(2) / yaml_matched_fields['ECS_CEN']
+
+        # loop through variables that use factor-based methods to compute prior variance
+        for var in yaml_matched_fields['factor_vars']:
+            cen, std = var  # extract central and standard deviation names
+
+            # set standard deviation equal to central value * PRIOR_STD_FACTOR
+            yaml_matched_fields[std] = yaml_matched_fields[cen] * yaml_matched_fields['PRIOR_STD_FACTOR']
+
+        return cls(**yaml_matched_fields)
 
     def set_state_priors_from_warmstart(self, ws_results):
+        """Set dataclass attributes for state variables based on warm start results.
+
+        Parameters
+        ----------
+        ws_results: ?
+            maybe dict with relevant warm start characteristics?
+        """
+        
         self.T1_CEN = 0.0
         self.T1_STD = 0.0
         
@@ -106,14 +148,7 @@ class Priors:
 
 
 if __name__ == '__main__':
-    class tester():
-        def __init__(self):
-            self.theta = 14
-            self.model = 'pco2geowc'
-    
-    t = tester()
+    Priors = ClimateModelPriors.from_yaml('config/priors.yaml')
+    Priors.set_state_priors_from_warmstart(0)
 
-    dc = Priors()
-    dc.set_regional_parameters(args=t)
-
-    print(dc.BETA_R1_CEN)
+    print(Priors)
