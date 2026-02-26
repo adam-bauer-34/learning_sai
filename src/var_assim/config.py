@@ -107,6 +107,13 @@ def parse_args():
         help='Override automatically generated assimilation windows'
     )
 
+    # regional noise in simluations?
+    parser.add_argument(
+        "--reg-noise",
+        action='store_true',
+        help='Is there nonzero noise in regional temperatures?'
+    )
+
     # add debugging mode
     parser.add_argument(
         "--debug",

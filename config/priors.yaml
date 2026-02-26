@@ -16,7 +16,7 @@ priors:
 
   # forcing efficacy of co2
   F1_CO2_CEN: 4.58
-  F2_CO2_STD: 0.519  # from Zelinka et al. (2020)
+  F1_CO2_STD: 0.519  # from Zelinka et al. (2020)
 
   # climate feedback (set by ECS in dataclass initialization)
   L_CEN: None
@@ -47,4 +47,30 @@ priors:
   BETA_R2_STD: 0.0055
 
   BETA_R3_CEN: 0.0153
-  BETA_R3_CEN: 0.0055
+  BETA_R3_STD: 0.0055
+
+  # set a list of variables that need the PRIOR_STD_FACTOR to set their prior variances
+  factor_vars:
+    - [L_CEN, L_STD]
+    - [G_CEN, G_STD]
+    - [C1_CEN, C1_STD]
+    - [C2_CEN, C2_STD]
+
+  # add warm start dummy vars (will be overridden by warm start module)
+  T1_CEN: None
+  T1_STD: None
+
+  T2_CEN: None
+  T2_STD: None
+
+  Q_CEN: None
+  Q_STD: None
+
+  T_R1_CEN: None
+  T_R1_STD: None
+
+  T_R2_CEN: None
+  T_R2_STD: None
+
+  T_R3_CEN: None
+  T_R3_STD: None

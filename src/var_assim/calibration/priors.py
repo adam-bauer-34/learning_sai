@@ -96,7 +96,7 @@ class ClimateModelPriors:
 
         Returns
         -------
-        cls: Priors
+        cls: ClimateModelPriors
             Priors object
         """
 
