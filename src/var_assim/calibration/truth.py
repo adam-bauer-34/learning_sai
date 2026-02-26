@@ -6,10 +6,11 @@ Feb 2026
 """
 
 import yaml
+import argparse
 
 import numpy as np
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 
 
 @dataclass
@@ -45,7 +46,7 @@ class ClimateModelTruth:
     T_R3_TR: float
 
     @classmethod
-    def from_cli_and_yaml(cls, cli_args: str, truth_path: str) -> 'ClimateModelTruth':
+    def from_cli_and_yaml(cls, cli_args: argparse.Namespace, truth_path: str) -> 'ClimateModelTruth':
         """Make dataclass from CLI and yaml.
 
         Parameters

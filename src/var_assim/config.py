@@ -41,6 +41,7 @@ def parse_args():
         "--scenario",
         type=str,
         default="ssp245",
+        choices=['ssp245', 'ssp585']
         help='The CO2 concentrations scenario'
     )
 
@@ -57,6 +58,7 @@ def parse_args():
         "--noise_model",
         type=str,
         default="AR1",
+        choices=["AR1", "AR0"]
         help='The noise model to use'
     )
 
@@ -65,6 +67,7 @@ def parse_args():
         "--theta",
         type=int,
         default=14,
+        choices=[9, 12, 14, 17, 21, 33]
         help='The true SAI angle parameter to estimate'
     )
 
@@ -104,13 +107,15 @@ def parse_args():
     parser.add_argument(
         "--override_windows",
         action='store_true',
+        default=False,
         help='Override automatically generated assimilation windows'
     )
 
     # regional noise in simluations?
     parser.add_argument(
-        "--reg-noise",
+        "--reg_noise",
         action='store_true',
+        default=False,
         help='Is there nonzero noise in regional temperatures?'
     )
 
@@ -118,7 +123,8 @@ def parse_args():
     parser.add_argument(
         "--debug",
         action='store_true',
-        help='Debug mode'
+        default=False,
+        help='Toggle default mode (adds a lot of print statements)'
     )
 
     return parser.parse_args()
