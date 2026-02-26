@@ -46,7 +46,7 @@ def parse_args():
         "--scenario",
         type=str,
         default="ssp245",
-        choices=['ssp245', 'ssp585']
+        choices=['ssp245', 'ssp585'],
         help='The CO2 concentrations scenario'
     )
 
@@ -63,7 +63,7 @@ def parse_args():
         "--noise_model",
         type=str,
         default="AR1",
-        choices=["AR1", "AR0"]
+        choices=["AR1", "AR0"],
         help='The noise model to use'
     )
 
@@ -72,7 +72,7 @@ def parse_args():
         "--theta",
         type=int,
         default=14,
-        choices=[9, 12, 14, 17, 21, 33]
+        choices=[9, 12, 14, 17, 21, 33],
         help='The true SAI angle parameter to estimate'
     )
 
