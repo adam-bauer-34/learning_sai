@@ -8,3 +8,4 @@ FIGS_DIR: analysis/figs
 TRUTH_PATH: config/truth.yaml
 PRIOR_PATH: config/priors.yaml
 NOISE_PATH: config/noise.yaml
+WINDOW_PATH: config/windowing.yaml
