@@ -24,7 +24,7 @@ from var_assim.dask_setup import start_dask
 from var_assim.emis import EmissionsBaseline 
 from var_assim.tlm_adj_checks import *
 from var_assim.model_errors import gen_noise_ts
-from var_assim.pproc_saving import process_output, save_output
+from var_assim.postprocessing import process_model_output
 from var_assim.stats.covar import get_covar_white
 from var_assim.stats.draws import get_prior_draws
 
@@ -177,7 +177,7 @@ def run_var_assim_experiment(args, logger, cal)
     """ASSIMILATION MODULE
     """
     # dictionary to make datatree out of later
-    datatree_dict = {}
+    results_dict = {}
 
     for TMAX in tmax_assims:
         print("--------------------------------------")

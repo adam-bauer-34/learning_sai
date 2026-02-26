@@ -118,6 +118,13 @@ def parse_args():
         help='Number of ensemble members'
     )
 
+    parser.add_argument(
+        "--save_output",
+        action='store_true',
+        default=False,
+        help='Save output to disk?'
+    )
+
     # regional noise in simluations?
     parser.add_argument(
         "--reg_noise",
