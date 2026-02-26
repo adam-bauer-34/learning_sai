@@ -1,2 +1,3 @@
 DATA_DIR: data
 FIGS_DIR: analysis/figs
+CALS_DIR: config

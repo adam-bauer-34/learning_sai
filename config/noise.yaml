@@ -1,0 +1,10 @@
+noise:
+  # internal variability noise magnitude
+  INT_VAR_STD: 0.27  # from Proistosescu and Huybers (2017)
+  AUTO_CORR: 0.2  # same as above
+
+  # observation noise (1.0 means no noise in system)
+  OBS_T1_STD: 1.0
+  OBS_Q_STD: 1.0
+  OBS_T_R1_STD: 1.0
+  OBS_T_R2_STD: 1.0
