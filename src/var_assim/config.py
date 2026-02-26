@@ -18,6 +18,11 @@ with open(CONFIG_PATH, "r") as f:
 DATA_DIR = Path(CONFIG["DATA_DIR"])
 FIGS_DIR = Path(CONFIG["FIGS_DIR"])
 
+TRUTH_PATH = Path(CONFIG["TRUTH_PATH"])
+PRIOR_PATH = Path(CONFIG["PRIOR_PATH"])
+NOISE_PATH = Path(CONFIG["NOISE_PATH"])
+
+
 def parse_args():
     """Parse command line arguments for each experiment.
     """

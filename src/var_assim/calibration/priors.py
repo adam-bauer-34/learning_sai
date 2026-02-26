@@ -10,6 +10,7 @@ import yaml
 import numpy as np
 
 from dataclasses import dataclass, fields
+from pathlib import Path
 
 
 @dataclass
@@ -86,12 +87,12 @@ class ClimateModelPriors:
     T_R3_STD: float
 
     @classmethod
-    def from_yaml(cls, prior_cal_path: str) -> 'ClimateModelPriors':
+    def from_yaml(cls, prior_cal_path: Path) -> 'ClimateModelPriors':
         """Create a Priors object from a .yaml file.
         
         Parameters
         ----------
-        prior_cal_path: str
+        prior_cal_path: Path
             path to prior data
 
         Returns
@@ -148,7 +149,7 @@ class ClimateModelPriors:
 
 
 if __name__ == '__main__':
-    Priors = ClimateModelPriors.from_yaml('config/priors.yaml')
+    Priors = ClimateModelPriors.from_yaml(Path('config/priors.yaml'))
     Priors.set_state_priors_from_warmstart(0)
 
     print(Priors)

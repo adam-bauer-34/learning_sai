@@ -1,3 +1,10 @@
+# where input, output, and checks data go
 DATA_DIR: data
+
+# where to store figures
 FIGS_DIR: analysis/figs
-CALS_DIR: config
+
+# paths to config files
+TRUTH_PATH: config/truth.yaml
+PRIOR_PATH: config/priors.yaml
+NOISE_PATH: config/noise.yaml

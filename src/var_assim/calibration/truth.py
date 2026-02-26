@@ -10,6 +10,7 @@ import argparse
 
 import numpy as np
 
+from pathlib import Path
 from dataclasses import dataclass
 
 
@@ -46,7 +47,7 @@ class ClimateModelTruth:
     T_R3_TR: float
 
     @classmethod
-    def from_cli_and_yaml(cls, cli_args: argparse.Namespace, truth_path: str) -> 'ClimateModelTruth':
+    def from_cli_and_yaml(cls, cli_args: argparse.Namespace, truth_path: Path) -> 'ClimateModelTruth':
         """Make dataclass from CLI and yaml.
 
         Parameters
@@ -54,7 +55,7 @@ class ClimateModelTruth:
         cli_args: `argparse.Namespace`
             command line arguements for main file
         
-        truth_path: str
+        truth_path: Path
             path to truth.yaml
 
         Returns
@@ -108,6 +109,6 @@ if __name__ == '__main__':
 
     print(type(args))
     
-    Truth = ClimateModelTruth.from_cli_and_yaml(args, 'config/truth.yaml')
+    Truth = ClimateModelTruth.from_cli_and_yaml(args, Path('config/truth.yaml'))
 
     print(Truth)

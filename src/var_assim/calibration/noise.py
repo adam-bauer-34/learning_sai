@@ -8,6 +8,7 @@ Feb 2026
 import yaml
 import argparse
 
+from pathlib import Path
 from dataclasses import dataclass
 
 
@@ -32,7 +33,7 @@ class ClimateModelNoise:
     OBS_T_R3_STD: float = 1.0
 
     @classmethod
-    def from_cli_and_yaml(cls, cli_args: argparse.Namespace, noise_path: str) -> 'ClimateModelNoise':
+    def from_cli_and_yaml(cls, cli_args: argparse.Namespace, noise_path: Path) -> 'ClimateModelNoise':
         """Make dataclass from CLI and yaml.
 
         Parameters
@@ -40,7 +41,7 @@ class ClimateModelNoise:
         cli_args: `argparse.Namespace`
             command line arguements for main file
         
-        truth_path: str
+        truth_path: Path
             path to noise.yaml
 
         Returns
@@ -79,6 +80,6 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    Noise = ClimateModelNoise.from_cli_and_yaml(args, 'config/noise.yaml')
+    Noise = ClimateModelNoise.from_cli_and_yaml(args, Path('config/noise.yaml'))
 
     print(Noise)
