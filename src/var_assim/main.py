@@ -7,12 +7,13 @@ Feb 2026
 
 import time
 
-from var_assim.config import parse_args, TRUTH_PATH, PRIOR_PATH, NOISE_PATH
+from var_assim.config import parse_args, TRUTH_PATH, PRIOR_PATH, NOISE_PATH, WINDOW_PATH
 from var_assim.logging_utils import setup_logger, get_git_hash
 from var_assim.models import MODEL_REGISTRY
 from var_assim.calibration.truth import ClimateModelTruth
 from var_assim.calibration.priors import ClimateModelPriors
 from var_assim.calibration.noise import ClimateModelNoise
+from var_assim.calibration.windowing import AssimilationWindowing
 
 
 def main():
@@ -32,6 +33,7 @@ def main():
     Priors = ClimateModelPriors.from_yaml(PRIOR_PATH)
     Truth = ClimateModelTruth.from_cli_and_yaml(args, TRUTH_PATH)
     Noise = ClimateModelNoise.from_cli_and_yaml(args, NOISE_PATH)
+    Windowing = AssimilationWindowing.from_cli_and_yaml(args, WINDOW_PATH)
 
     # run variational data assimilation experiment with passed model
     try:
@@ -39,7 +41,7 @@ def main():
     except KeyError:
         raise ValueError(f"Model {args.model} doesn't exist in model registry:\n{MODEL_REGISTRY}")
 
-    run_var_assim_experiment(logger, args, Priors, Truth, Noise)
+    run_var_assim_experiment(logger, args, Priors, Truth, Noise, Windowing)
 
     t1 = time.time()
 

@@ -10,6 +10,7 @@ import argparse
 
 from pathlib import Path
 
+# setup directories for data, saving, and other configurations
 CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "dirs.yaml"
 
 with open(CONFIG_PATH, "r") as f:
@@ -21,6 +22,7 @@ FIGS_DIR = Path(CONFIG["FIGS_DIR"])
 TRUTH_PATH = Path(CONFIG["TRUTH_PATH"])
 PRIOR_PATH = Path(CONFIG["PRIOR_PATH"])
 NOISE_PATH = Path(CONFIG["NOISE_PATH"])
+WINDOW_PATH = Path(CONFIG["WINDOW_PATH"])
 
 
 def parse_args():
@@ -63,7 +65,7 @@ def parse_args():
         "--noise_model",
         type=str,
         default="AR1",
-        choices=["AR1", "AR0"],
+        choices=["AR1", "AR0", "nn"],
         help='The noise model to use'
     )
 
@@ -86,7 +88,7 @@ def parse_args():
 
     # SAI cooling per decade
     parser.add_argument(
-        "--dep_p_dec",
+        "--deg_p_dec",
         type=float,
         default=0.1,
         help='Degrees per decade of cooling from SAI'
@@ -100,20 +102,20 @@ def parse_args():
         help='The number of years to linearly ramp up SAI'
     )
 
-    # number of ensemble members
+    parser.add_argument(
+        '--windowing',
+        type=str,
+        default='original',
+        choices=['original', 'debug', 'fine_grad_coarse', 'four'],
+        help='Assimilation window name; config pulled from config/windowing.yaml.'
+    )
+
+    # number of ensemble member
     parser.add_argument(
         "--n_ens",
         type=int,
         default=500,
         help='Number of ensemble members'
-    )
-
-    # manual override of assimilation windows?
-    parser.add_argument(
-        "--override_windows",
-        action='store_true',
-        default=False,
-        help='Override automatically generated assimilation windows'
     )
 
     # regional noise in simluations?
