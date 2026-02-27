@@ -31,8 +31,8 @@ def main():
 
     # setup prior, truth, and noise dataclasses from config and arguments
     Noise = ClimateModelNoise.from_cli_and_yaml(args, NOISE_PATH)
-    Priors = ClimateModelPriors.from_cli_and_yaml_and_noise(args, PRIOR_PATH, Noise)
     Truth = ClimateModelTruth.from_cli_and_yaml(args, TRUTH_PATH)
+    Priors = ClimateModelPriors.from_cli_and_yaml_and_noise(args, PRIOR_PATH, Noise)
     Windowing = AssimilationWindowing.from_cli_and_yaml(args, WINDOW_PATH)
 
     # run variational data assimilation experiment with passed model
