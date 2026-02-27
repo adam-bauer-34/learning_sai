@@ -24,7 +24,7 @@ from var_assim.dask_setup import start_dask
 from var_assim.emis import EmissionsBaseline 
 from var_assim.tlm_adj_checks import *
 from var_assim.model_errors import gen_noise_ts
-from var_assim.postprocessing import process_model_output
+from var_assim.postprocessing import process_simulation_window, make_master_datatree
 from var_assim.stats.covar import get_covar_white
 from var_assim.stats.draws import get_prior_draws
 
@@ -200,7 +200,7 @@ def run_var_assim_experiment(args, logger, cal)
 
         # true vector of controls: initial conditions, parameters, and model
         # errors
-        theta_tr = np.hstack([np.array([T1_TR, T2_TR,
+        controls_tr = np.hstack([np.array([T1_TR, T2_TR,
                              Q_TR, T_R1_TR, T_R2_TR,
                              L_TR, G_TR, EPS_TR, C1_TR, C2_TR, F1_CO2_TR,
                              ALPHA_R1_TR, ALPHA_R2_TR, BETA_R1_TR, BETA_R2_TR]), mod_errors])
@@ -213,7 +213,7 @@ def run_var_assim_experiment(args, logger, cal)
                                      np.zeros_like(mod_errors)])
 
         # make true data path over this time window
-        data_tr_p, times = get_nonlin_path(e, theta_tr, TMIN, TMAX, DT)
+        data_tr_p, times = get_nonlin_path(e, controls_tr, TMIN, TMAX, DT)
 
         # note stds of priors and obs
         OBS_T1_STD = 1.0  # observation noise in measuring T1/T2
@@ -278,7 +278,7 @@ def run_var_assim_experiment(args, logger, cal)
             ALPHA_MAX = 1.
 
             # check tlm and save output of that procedure
-            _ = get_tlm_check(e, theta_tr, TMIN, TMAX, DT, ALPHA_MIN,
+            _ = get_tlm_check(e, controls_tr, TMIN, TMAX, DT, ALPHA_MIN,
                               ALPHA_MAX, SAVE_RESULTS=True)
 
         
@@ -289,7 +289,7 @@ def run_var_assim_experiment(args, logger, cal)
             # Check 1: Adjoint Identity
 
             # do first check
-            _ = get_adj_id_check(e, theta_tr, TMIN, TMAX, DT,
+            _ = get_adj_id_check(e, controls_tr, TMIN, TMAX, DT,
                                  SAVE_RESULTS=True)
 
             # Check 2: Gradient of Cost Function
@@ -297,8 +297,8 @@ def run_var_assim_experiment(args, logger, cal)
             ALPHA_MAX = 1.0
 
             # run check function
-            _ = get_cost_grad_check(control=theta_tr * 1.1,
-                                    cost_args=[theta_tr,
+            _ = get_cost_grad_check(control=controls_tr * 1.1,
+                                    cost_args=[controls_tr,
                                                inv_covar_prior,
                                                inv_covar_T1_obs,
                                                inv_covar_Q_obs,
@@ -337,7 +337,7 @@ def run_var_assim_experiment(args, logger, cal)
         # make list of ensemble members
         ensemble_members = [EnsembleMember(theta_p,
                                            -1, tol, max_iter,
-                                           TMIN, TMAX, DT, theta_tr,
+                                           TMIN, TMAX, DT, controls_tr,
                                            inv_covar_prior, inv_covar_T1_obs,
                                            inv_covar_Q_obs, inv_covar_T_R1_obs,
                                            inv_covar_T_R2_obs, obs, times)
@@ -373,107 +373,17 @@ def run_var_assim_experiment(args, logger, cal)
         opt_ensmems = c.gather(futures)
 
         t1 = time.time()
+
+        RUNTIME = t1 - t0
         # print(t1 - t0)
-        print("Done!")
 
-        print("Processing output...")
-        # store all the data
-        data = np.array([m.data for m in opt_ensmems])
-        controls = np.array([m.control for m in opt_ensmems])
-        costs = np.array([m.cost for m in opt_ensmems])
-        l2s = np.array([m.l2 for m in opt_ensmems])
+        # process simulation output into 
+        ds = process_simulation_window(logger, args, TMAX,
+                                       opt_ensmems, obs, data_tr_p,
+                                       controls_tr, opt_chars, RUNTIME)
 
-        data_hist = np.array([m.data_hist for m in opt_ensmems])
-        controls_hist = np.array([m.controls_hist for m in
-                                  opt_ensmems])
-        cost_hist = np.array([m.cost_hist for m in opt_ensmems])
-        l2s_hist = np.array([m.l2s_hist for m in opt_ensmems])
+        results_dict[str(TMAX)] = ds
 
-        flags = np.array([m.flag for m in opt_ensmems])
-        print("Done processing!\n")
-
-        # ---------------------------------------------------------------------
-        # make dataset for this assimilation window and save to dictionary that
-        # we'll use to make a datatree later
-        # ---------------------------------------------------------------------
-        names = np.hstack([['T1', 'T2', 'Q', 'T_R1', 'T_R2', 'L', 'G', 'EPS', 'C1', 'C2', 'F1_CO2',
-                            'ALPHA_R1', 'ALPHA_R2', 'BETA_R1', 'BETA_R2'],
-                           ['q' + str(i) for i in range(len(times))]])
-
-        ds = xr.Dataset(data_vars={'data_final': (['ens_mem', 'vari', 'time'],
-                                                  data),
-                                   'l2s': (['ens_mem'], l2s),
-                                   'costs': (['ens_mem'], costs),
-                                   'controls': (['ens_mem', 'vari'], controls),
-                                   'data_hist': (['ens_mem', 'vari', 'iter',
-                                                  'time'], data_hist),
-                                   'l2_hist': (['ens_mem', 'iter'], l2s_hist),
-                                   'cost_hist': (['ens_mem', 'iter'],
-                                                 cost_hist),
-                                   'controls_hist': (['ens_mem', 'vari',
-                                                      'iter'],
-                                                     controls_hist),
-                                   'flag': (['ens_mem'], flags),
-                                   'obs': (['obs_var', 'time'], obs),
-                                   'data_truth': (['vari', 'time'], data_tr_p),
-                                   'controls_truth': (['vari'], theta_tr)},
-                        coords={'time': (['time'], times),
-                                'iter': (['iter'], np.arange(0, max_iter + 1,
-                                                             1)),
-                                'vari': (['vari'], names),
-                                'ens_mem': (['ens_mem'], np.arange(0, N_ENS,
-                                                                   1)),
-                                'obs_var': (['obs_var'], ['T1', 'Q', 'T_R1', 'T_R2'])},
-                        attrs={'TMIN': TMIN,
-                               'TMAX': TMAX,
-                               'DT': DT,
-                               'max_iter': max_iter,
-                               'tol': tol,
-                               'run_time': t1 - t0,
-                               'ECS': ECS_TR,
-                               'ANGLE': THETA,
-                               'assim_tmax': tmax_assims,
-                               'internal_variability_std': INT_VAR_STD})
-
-        datatree_dict[str(TMAX)] = ds
-
-    dt = DataTree.from_dict(datatree_dict, 'TMAX')
-
-    if SAVE_OUTPUT:
-        # get current directory and save
-        sim_type = 'pco2geowc'
-        if not MANUAL_WINDOWING:
-            path = DATA_DIR + '/output/' + sim_type\
-                + '/margobs_ws_'\
-                + SCENARIO + "_"\
-                + sim_type + "_"\
-                + "TMIN" + str(TMIN) + "_"\
-                + "AR" + str(AR_P) + "_"\
-                + "THETA" + str(THETA) + "_"\
-                + "ECS" + str(ECS_TR) + "_"\
-                + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
-                + "NYRSRAMP" + str(N_YEARS_RAMP) + "_"\
-                + "Nwinds" + str(N_windows) + "_"\
-                + "Nens" + str(N_ENS) + ".nc"
-        else:
-            path = DATA_DIR + '/output/' + sim_type\
-                + '/margobs_ws_'\
-                + SCENARIO + "_"\
-                + sim_type + "_"\
-                + "TMIN" + str(TMIN) + "_"\
-                + "AR" + str(AR_P) + "_"\
-                + "THETA" + str(THETA) + "_"\
-                + "ECS" + str(ECS_TR) + "_"\
-                + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
-                + "NYRSRAMP" + str(N_YEARS_RAMP) + "_"\
-                + "Nwinds" + str(len(tmax_assims)) + "custom_"\
-                + "Nens" + str(N_ENS) + ".nc"  
-            
-        dt.to_netcdf(filepath=path, mode='w', format='NETCDF4',
-                     engine='netcdf4')
-
-        print("\nOutput successfully saved to:\n{}\n".format(path))
-
-    else:
-        print(dt)
+    # synthesize datasets from each window into a datatree object
+    make_master_datatree(logger, args, results_dict)
     
