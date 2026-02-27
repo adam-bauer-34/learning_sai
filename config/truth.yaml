@@ -8,54 +8,52 @@ global:
   EPS_TR: 1.58
   F_EFF_GEO_TR: 0.09
 
-  # dummy warm start attributes (will be overridden later)
-  T1_TR: None
-  T2_TR: None
-  Q_TR: None
-  T_R1_TR: None
-  T_R2_TR: None
-  T_R3_TR: None
+  # initial conditions AS OF 1850 (will be overridden by warm start later)
+  T1_TR: 0.0
+  T2_TR: 0.0
+  Q_TR: 0.0
 
-theta:
-  9:
-    ALPHA_R1_TR: 2.0
-    ALPHA_R2_TR: 1.3
-    ALPHA_R3_TR: 1.5
-    BETA_R1_TR: 0.018
-    BETA_R2_TR: -0.0053
-    BETA_R3_TR: 0.0153
-  12:
-    ALPHA_R1_TR: 2.0
-    ALPHA_R2_TR: 1.3
-    ALPHA_R3_TR: 1.5
-    BETA_R1_TR: 0.018
-    BETA_R2_TR: -0.0121
-    BETA_R3_TR: 0.0153
-  14:
-    ALPHA_R1_TR: 2.0
-    ALPHA_R2_TR: 1.3
-    ALPHA_R3_TR: 1.5
-    BETA_R1_TR: 0.018
-    BETA_R2_TR: -0.018
-    BETA_R3_TR: 0.0153
-  17:
-    ALPHA_R1_TR: 2.0
-    ALPHA_R2_TR: 1.3
-    ALPHA_R3_TR: 1.5
-    BETA_R1_TR: 0.018
-    BETA_R2_TR: -0.025
-    BETA_R3_TR: 0.0153
-  21:
-    ALPHA_R1_TR: 2.0
-    ALPHA_R2_TR: 1.3
-    ALPHA_R3_TR: 1.5
-    BETA_R1_TR: 0.025
-    BETA_R2_TR: -0.0305
-    BETA_R3_TR: 0.0153
-  33:
-    ALPHA_R1_TR: 2.0
-    ALPHA_R2_TR: 1.3
-    ALPHA_R3_TR: 1.5
-    BETA_R1_TR: 0.03825
-    BETA_R2_TR: -0.0387
-    BETA_R3_TR: 0.0351
+# region number specific calibrations: angle and regional temperature initial conditions
+two_region:
+  T_REG_TR: [0.0, 0.0]
+  theta:
+    9:
+      ALPHA_TR: [2.0, 1.3]
+      BETA_TR: [0.018, -0.0045]
+    12:
+      ALPHA_TR: [2.0, 1.3]
+      BETA_TR: [0.018, -0.011]
+    14:
+      ALPHA_TR: [2.0, 1.3]
+      BETA_TR: [0.018, -0.018]
+    17:
+      ALPHA_TR: [2.0, 1.3]
+      BETA_TR: [0.018, -0.023]
+    21:
+      ALPHA_TR: [2.0, 1.3]
+      BETA_TR: [0.021, -0.032]
+    33:
+      ALPHA_TR: [2.0, 1.3]
+      BETA_TR: [0.0409625, -0.0409625]
+
+three_region:
+  T_REG_TR: [0.0, 0.0, 0.0]
+  theta:
+    9:
+      ALPHA_TR: [2.0, 1.3, 1.5]
+      BETA_TR: [0.018, -0.0053, 0.0153]
+    12:
+      ALPHA_TR: [2.0, 1.3, 1.5]
+      BETA_TR: [0.018, -0.0121, 0.0153]
+    14:
+      ALPHA_TR: [2.0, 1.3, 1.5]
+      BETA_TR: [0.018, -0.018, 0.0153]
+    17:
+      ALPHA_TR: [2.0, 1.3, 1.5]
+      BETA_TR: [0.018, -0.025, 0.0153]
+    21:
+      ALPHA_TR: [2.0, 1.3, 1.5]
+      BETA_TR: [0.025, -0.0305, 0.0153]
+    33:
+      ALPHA_TR: [2.0, 1.3, 1.5]
+      BETA_TR: [0.03825, -0.0387, 0.0351]
