@@ -45,15 +45,8 @@ class AssimilationWindowing:
         with open(windowing_path, 'r') as f:
             noise_data = yaml.safe_load(f)
 
-        # set parameter dictionary and make into class
-        param_dict = {
-            'NAME': cli_args.windowing,
-            'windows': noise_data[cli_args.windowing]['windows'],
-            'N_WINDS': len(noise_data[cli_args.windowing]['windows'])
-        }
-
         # check if valid windows and tmin combination
-        if param_dict['windows'][0] < cli_args.tmin:
+        if noise_data[cli_args.windowing]['windows'][0] < cli_args.tmin:
             raise ValueError(
                 (
                     f"Invalid windowing setup given tmin:\n"
@@ -61,6 +54,17 @@ class AssimilationWindowing:
                     f"    TMIN: {cli_args.tmin}"
                 )
             )
+        
+        windows = []
+        for w in noise_data[cli_args.windowing]['windows']:
+            windows.append((cli_args.tmin, w))
+        
+        # set parameter dictionary and make into class
+        param_dict = {
+            'NAME': cli_args.windowing,
+            'windows': windows,
+            'N_WINDS': len(noise_data[cli_args.windowing]['windows'])
+        }
 
         return cls(**param_dict)
 
