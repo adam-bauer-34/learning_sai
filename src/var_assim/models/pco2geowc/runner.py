@@ -210,7 +210,7 @@ def run_var_assim_experiment_wip(logger: logging.Logger, args: argparse.Namespac
 
         logger.info(f"       Processing simulation output")
         # process simulation output into 
-        ds = process_simulation_window(logger, args, TMAX,
+        ds = process_simulation_window(args, TMAX,
                                        opt_ensmems, obs, data_tr_p,
                                        controls_tr, opt_config, RUNTIME)
 

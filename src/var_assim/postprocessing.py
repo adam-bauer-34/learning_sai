@@ -15,8 +15,7 @@ from datatree import DataTree
 from var_assim.config import DATA_DIR
 
 
-def process_simulation_window(logger: logging.Logger,
-                              args: argparse.Namespace,
+def process_simulation_window(args: argparse.Namespace,
                               TMAX: int,
                               opt_ensmems,
                               obs: np.ndarray,
@@ -30,9 +29,6 @@ def process_simulation_window(logger: logging.Logger,
 
     Parameters
     ----------
-    logger: logging.Logger
-        logger for print statements
-
     args: argparse.ArgumentParser
         command line arguments namespace
 

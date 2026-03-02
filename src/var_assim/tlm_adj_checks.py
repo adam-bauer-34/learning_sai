@@ -15,6 +15,29 @@ from var_assim.config import DATA_DIR
 
 def run_component_checks(args, e, controls, TMIN, TMAX, cost_args, DT=1.0):
     """Check components of variational data assimilation.
+
+    Parameters
+    ----------
+    args: argparse.Namespace
+        namespace for current simulation
+
+    e: EmissionsBaseline
+        emissions baseline object
+
+    controls: list
+        control vector
+
+    TMIN: int
+        minimum time for integration during checks
+
+    TMAX: int
+        maximum time for integration during checks
+
+    cost_args: list
+        arguments for model.cost and model.grad functions
+    
+    DT: float = 1.0
+        time discretization (usually set to be globally 1.0)
     """
 
     # import necessary functions, this scales to whatever model i use without big registries
@@ -52,6 +75,9 @@ def _do_tlm_check(args, get_nonlin_path, get_tlm_path, e, controls,
 
     Parameters
     ----------
+    args: argparse.Namespace
+        CLI input for simulations 
+
     get_nonlin_path: callable
         function from model.dynamics, integrates nonlinear model
 
@@ -203,6 +229,29 @@ def _do_adj_id_check(args,
 def _do_grad_cost_check(args, cost, grad, control, cost_args, 
                         ALPHA_MIN, ALPHA_MAX):
     """Cost gradient check function.
+
+    Parameters
+    ----------
+    args: argparse.Namespace
+        CLI input for simulations 
+
+    cost: callable
+        function from model.cost, evaluates cost function
+
+    grad: callable
+        function from model.cost, evaluates cost function gradient using adjoint
+    
+    control: list   
+        control vector
+    
+    cost_args: list
+        arguments for cost and gradient functions
+    
+    ALPHA_MIN: float
+        minimum perturbation size
+    
+    ALPHA_MAX: float
+        maximum perturbation size
     """
 
     if ALPHA_MIN > ALPHA_MAX:
