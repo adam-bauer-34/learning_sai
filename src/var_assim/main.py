@@ -29,15 +29,15 @@ def main():
     logger.info(f"Git hash: {get_git_hash()}")
     logger.info(f"Running experiment with config: {args}")
 
-    # setup prior, truth, and noise dataclasses from config and arguments
-    Priors = ClimateModelPriors.from_yaml(PRIOR_PATH)
-    Truth = ClimateModelTruth.from_cli_and_yaml(args, TRUTH_PATH)
+    # setup prior, truth, noise, and windowing dataclasses from config and arguments
     Noise = ClimateModelNoise.from_cli_and_yaml(args, NOISE_PATH)
+    Truth = ClimateModelTruth.from_cli_and_yaml(args, TRUTH_PATH)
+    Priors = ClimateModelPriors.from_cli_and_yaml_and_noise(args, PRIOR_PATH, Noise)
     Windowing = AssimilationWindowing.from_cli_and_yaml(args, WINDOW_PATH)
 
     # run variational data assimilation experiment with passed model
     try:
-        run_var_assim_experiment = MODEL_REGISTRY[args.model]
+        run_var_assim_experiment = MODEL_REGISTRY[args.model]['runner']
     except KeyError:
         raise ValueError(f"Model {args.model} doesn't exist in model registry:\n{MODEL_REGISTRY}")
 
