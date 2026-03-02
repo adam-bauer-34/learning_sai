@@ -156,6 +156,22 @@ def parse_args():
     return parser.parse_args()
 
 
+def check_config_compatability(args):
+    """Check if dependent CLI inputs are compatable
+
+    Parameters
+    ----------
+    args: argparse.Namespace
+        CLI args
+    """
+
+    if args.model == 'pco2geowc_nn' and args.reg_noise:
+        raise ValueError(f"{args.model} is incompatable with regional noise turned on.")
+    
+    if args.model == 'pco2geowc_nn' and args.noise_model != 'nn':
+        raise ValueError(f"{args.model} is not compatabile with any noise model other than 'nn'.")
+
+
 # quick test
 if __name__ == "__main__":
     args = parse_args()
