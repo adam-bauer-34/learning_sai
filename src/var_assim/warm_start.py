@@ -18,7 +18,7 @@ def warm_start_simulation(logger: logging.Logger,
                           args: argparse.Namespace,
                           Truth: object,
                           Prior: object,
-                          nonlin_path: Callable) -> np.ndarray:
+                          nonlin_path: Callable):
     
 
     # make warm start emissions baseline

@@ -18,7 +18,7 @@ from var_assim.config import DATA_DIR
 def process_simulation_window(logger: logging.Logger,
                               args: argparse.Namespace,
                               TMAX: int,
-                              opt_ensmems: list,
+                              opt_ensmems,
                               obs: np.ndarray,
                               data_tr_p: np.ndarray,
                               controls_tr: np.ndarray,
@@ -63,8 +63,6 @@ def process_simulation_window(logger: logging.Logger,
         dataset containing all model results
     """
     
-    logger.info(f"Processing model for window {args.tmin}-{TMAX}...")
-
     # make times list
     times = np.arange(args.tmin, TMAX, 1)
 
@@ -131,7 +129,7 @@ def process_simulation_window(logger: logging.Logger,
 
 
 def make_master_datatree(logger: logging.Logger, 
-                        args: argparse.ArgumentParser,
+                        args: argparse.Namespace,
                         dt_dict: dict):
     """Make master datatree object to store simulation results.
 
@@ -168,9 +166,9 @@ def make_master_datatree(logger: logging.Logger,
             )
 
         # report status and save to netcdf file
-        logger.info(f"Output saved to: {path}")
+        logger.info(f"    Output saved to: {path}")
         dt.to_netcdf(filepath=path, mode='w', format='NETCDF4', engine='netcdf4')
 
     else:
         # print output
-        logger.info(f"Model simulation results:\n{dt}")
+        logger.info(f"    Model simulation results:\n{dt}")
