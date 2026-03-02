@@ -12,14 +12,12 @@ import numpy as np
 
 from typing import Callable
 from var_assim.emis import EmissionsBaseline
-from var_assim.calibration.truth import ClimateModelTruth
-from var_assim.calibration.priors import ClimateModelPriors
 
 
 def warm_start_simulation(logger: logging.Logger,
                           args: argparse.Namespace,
-                          Truth: ClimateModelTruth,
-                          Prior: ClimateModelPriors,
+                          Truth: object,
+                          Prior: object,
                           nonlin_path: Callable) -> np.ndarray:
     
 
