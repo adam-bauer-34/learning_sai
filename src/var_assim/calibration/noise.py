@@ -8,8 +8,11 @@ Feb 2026
 import yaml
 import argparse
 
+import numpy as np
+
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from var_assim.models import MODEL_REGISTRY
 
 
 @dataclass
@@ -26,11 +29,12 @@ class ClimateModelNoise:
     AUTO_CORR: float
 
     # regional noise
+    OBS_T_REG_STD: list[float]
+
+    # observation noise
     OBS_T1_STD: float = 1.0
     OBS_Q_STD: float = 1.0
-    OBS_T_R1_STD: float = 1.0
-    OBS_T_R2_STD: float = 1.0
-    OBS_T_R3_STD: float = 1.0
+
 
     @classmethod
     def from_cli_and_yaml(cls, cli_args: argparse.Namespace, noise_path: Path) -> 'ClimateModelNoise':
@@ -51,19 +55,30 @@ class ClimateModelNoise:
         """
 
         param_dict = {}
+        
+        # note config
         param_dict['NOISE_MODEL'] = cli_args.noise_model
         param_dict['REGIONAL'] = cli_args.reg_noise
 
         with open(noise_path, 'r') as f:
             noise_data = yaml.safe_load(f)
 
-        # merge dictionaries
-        # if we have regional noise, include that part of the yaml, if not, exclude and allow defaults
-        if cli_args.reg_noise:
-            param_dict = param_dict | noise_data['noise_model'][param_dict['NOISE_MODEL']] | noise_data['noise_model']['Regional']
+        # merge noise model based parameters
+        param_dict = param_dict | noise_data['noise_model'][cli_args.noise_model]
 
+        # if regional noise, add that
+        if cli_args.reg_noise:
+            N_regions = MODEL_REGISTRY[cli_args.model]['N_regions']
+            param_dict['OBS_T_REG_STD'] = noise_data['noise_model']['Regional'][N_regions]['OBS_T_REG_STD']
+
+        # if no noise, just add ones
         else:
-            param_dict = param_dict | noise_data['noise_model'][param_dict['NOISE_MODEL']]
+            if MODEL_REGISTRY[cli_args.model]['N_regions'] == 'two_region':
+                param_dict['OBS_T_REG_STD'] = [1.0, 1.0]
+            elif MODEL_REGISTRY[cli_args.model]['N_regions'] == 'three_region':
+                param_dict['OBS_T_REG_STD'] = [1.0, 1.0, 1.0]
+            else:
+                raise ValueError("Number of regions not supported.")
 
         return cls(**param_dict)
 
@@ -72,6 +87,9 @@ class ClimateModelNoise:
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--model', type=str, default='pco2geowc'
+    )
     parser.add_argument(
         '--noise_model', type=str, default='AR1', choices=['AR1', 'AR0']
     )
