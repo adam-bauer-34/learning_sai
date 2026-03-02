@@ -37,5 +37,3 @@ def warm_start_simulation(logger: logging.Logger,
     # `Truth` and `Priors`
     Truth.set_state_truth_from_warmstart(paths_ws[:, -1])
     Prior.set_state_priors_from_warmstart(paths_ws[:, -1])
-
-    return paths_ws
