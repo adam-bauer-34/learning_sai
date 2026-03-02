@@ -16,7 +16,7 @@ from var_assim.config import DATA_DIR
 
 
 def process_simulation_window(logger: logging.Logger,
-                              args: argparse.ArgumentParser,
+                              args: argparse.Namespace,
                               TMAX: int,
                               opt_ensmems: list,
                               obs: np.ndarray,
@@ -88,7 +88,7 @@ def process_simulation_window(logger: logging.Logger,
     # we'll use to make a datatree later
 
     # set variable names for saving based on which model equations we use
-    if args.model is not 'pco2geowc3':
+    if args.model != 'pco2geowc3':
         names = np.hstack([['T1', 'T2', 'Q', 'T_R1', 'T_R2', 'L', 'G', 'EPS', 'C1', 'C2', 'F1_CO2',
                             'ALPHA_R1', 'ALPHA_R2', 'BETA_R1', 'BETA_R2'],
                             ['q' + str(i) for i in range(len(times))]])
