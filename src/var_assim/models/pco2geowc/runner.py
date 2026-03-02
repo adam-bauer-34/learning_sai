@@ -12,13 +12,19 @@ To run:
 import sys
 import time
 import warnings 
+import logging
+import argparse
 
 # filter out runtime warnings which clog log files
 # (they are natural in the scipy.minimize call)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 import numpy as np
-import xarray as xr
+
+from var_assim.calibration.noise import ClimateModelNoise
+from var_assim.calibration.priors import ClimateModelPriors
+from var_assim.calibration.truth import ClimateModelTruth
+from var_assim.calibration.windowing import AssimilationWindowing
 
 from var_assim.dask_setup import start_dask
 from var_assim.emis import EmissionsBaseline 
@@ -37,112 +43,26 @@ from var_assim.models.pco2geowc.parallelization import EnsembleMember, runner_4d
 def run_var_assim_experiment():
     pass
 
-def run_var_assim_experiment_wip(logger, args, Prior, Truth, Noise, Windowing):
+def run_var_assim_experiment_wip(logger: logging.Logger, args: argparse.ArgumentParser,
+                                 Prior: ClimateModelPriors, Truth: ClimateModelTruth,
+                                 Noise: ClimateModelNoise, Windowing: AssimilationWindowing):
     # start dask
     c = start_dask(logger)
     logger.info(c)
 
-    # raise ECS warning
-    if ECS_TR != 3.0:
-        print("WARNING: Chaning ECS changes the forcing sensitivity to CO2 concentrations, NOT the feedback \lambda, to keep the prior on the SAI angle consistent between simulations.")
-
-    # binary variables that are pre-set
-    CHECK_TLM = False  # check the tangent linear model?
-    CHECK_ADJ = False  # check the adjoint model and the cost function gradient?
-    MANUAL_WINDOWING = True  # set assimilation windows manually?
-
-    # ----------------------------------------
-    # Initialize the problem
-    # ----------------------------------------
-    # set the time discretization
-    DT = 1.0
-
-    # make set of assimilation windows
-    if not MANUAL_WINDOWING:
-        tmax_assims = np.linspace(TMIN, 2100, N_windows, dtype=int)[1:]
-    
-    else:
-        fine = np.arange(TMIN, 2050, 2)  # fine grained early on
-        tmax_assims = np.hstack([fine, [2075, 2100]])[1:]  # add two larger ones later, ignore TMIN
-
-    # GLOBAL ENERGY BALANCE MODEL PARAMETERS
-    # central values of priors on global parameters
-    ECS_CEN = 3.0  # central value of equilibrium climate sensitivity
-    G_CEN = 0.7  # layer transfer coefficient
-    C1_CEN = 8  # heat capacity of surface layer
-    C2_CEN = 100  # heat capacity of ocean layer
-    F1_CO2_CEN = 4.58  # forcing from log term in CO2
-    L_CEN = F1_CO2_CEN * np.log(2) / ECS_CEN  # central value of climate feedback
-    EPS_CEN = 1.58  # pattern effect
-
-    # true parameters used to make observations
-    L_TR = L_CEN  # sensitivity
-    G_TR = 0.7  # layer transfer coefficient
-    C1_TR = 8  # heat capacity of surface layer
-    C2_TR = 100  # heat capacity of ocean layer
-    F1_CO2_TR = L_TR * ECS_TR / np.log(2)  # forcing from log term in CO2
-    EPS_TR = 1.58  # pattern effect
-
-    F_EFF_GEO_TR = 0.09  # W / m2 per TgS / yr of geoengineering (forcing efficacy)
-    INT_VAR_STD = 0.27  # internal variability standard deviation from Proistosescu and Huybers, Sci Adv, 2017
-
-    # REGIONAL PATTERN SCALING MODEL PARAMETERS
-    # central value and standard deviations of regional variables
-    df = pd.read_csv(DATA_DIR + '/input/regional_calibration_parameters.csv',
-                     delimiter=',', header=0, index_col='THETA')
-    
-    # print(F1_CO2_CEN, F1_CO2_TR, ECS_TR, L_TR, L_CEN)
-
-    # global temperature related parameters
-    ALPHA_R1_CEN = df.ALPHA_R1_CEN[THETA]  # region 1 pattern scaling parameter (global T)
-    ALPHA_R2_CEN = df.ALPHA_R2_CEN[THETA]  # region 2 pattern scaling parameter (global T)
-    ALPHA_R1_STD = df.ALPHA_R1_STD[THETA]  # standard deviation of alpha 1 prior
-    ALPHA_R2_STD = df.ALPHA_R2_STD[THETA]  # standard deviation of alpha 2 prior
-
-    # geoengineering related parameters
-    BETA_R1_CEN = df.BETA_R1_CEN[THETA]  # region 1 pattern scaling parameter (geoengeineering)
-    BETA_R2_CEN = df.BETA_R2_CEN[THETA]  # region 2 pattern scaling parameter (geoengeineering)
-    BETA_R1_STD = df.BETA_R1_STD[THETA]  # region 1 pattern scaling parameter (geoengeineering)
-    BETA_R2_STD = df.BETA_R2_STD[THETA]  # region 2 pattern scaling parameter (geoengeineering)
-
-    # true values used to make observations
-    ALPHA_R1_TR = df.ALPHA_R1_TR[THETA]  # region 1 pattern scaling parameter (global T)
-    ALPHA_R2_TR = df.ALPHA_R2_TR[THETA]  # region 2 pattern scaling parameter (global T)
-    BETA_R1_TR = df.BETA_R1_TR[THETA]  # region 1 pattern scaling parameter (geoengeineering)
-    BETA_R2_TR = df.BETA_R2_TR[THETA]  # region 2 pattern scaling parameter (geoengeineering)
-
     """WARM START MODULE.
     """
-    logger.info("Starting warm start module")
-    
+    logger.info("    Starting warm start module")
     warm_start_simulation(logger, args, Truth, Prior, get_nonlin_path)
-
-    print("==================================================================")
-    print("Simulation attributes:")
-    print("------------------------------------------------------------------")
-    print("Socio-economic pathway: {}".format(SCENARIO))
-    print("Temperature offset by SAI per decade: {} deg C".format(DEG_PER_DEC))
-    print("The SAI ramp-up occurs over {} years".format(N_YEARS_RAMP))
-    print("The initial time is: {}".format(TMIN))
-    print("Temperature is forced with AR({}) noise.".format(AR_P))
-    print("ECS = {}.".format(ECS_TR))
-    print("The angle is {} degrees between temperature and geoengineering.".format(THETA))
-    if not MANUAL_WINDOWING:
-        print("There are {} (auto-generated) assimilation windows, starting in {} and ending in 2100 (this implies adding one window adds {} years of observations).".format(N_windows - 1, TMIN, (2100 - TMIN)/len(tmax_assims)))
-    else:
-        print("There are {} assimilation windows that were manually specified, which are {}.".format(len(tmax_assims), tmax_assims))
-    print("The 4DVAR ensemble has {} members.".format(N_ENS))
-    print("==================================================================")
+    logger.info("    Warm start complete")
 
     """ASSIMILATION MODULE
     """
     # dictionary to make datatree out of later
     results_dict = {}
 
-    for TMAX in tmax_assims:
-        print("--------------------------------------")
-        print("WE ARE ON TMAX = {}".format(TMAX))
-        print("--------------------------------------")
+    for TMAX in Windowing.windows:
+        logger.info(f"    Carrying out data assimilation for window {args.tmin}-{TMAX}")
 
         # set seed so we get same draws for each assimilation window
         np.random.seed(1000)
@@ -154,26 +74,16 @@ def run_var_assim_experiment_wip(logger, args, Prior, Truth, Noise, Windowing):
                               T_START=TMIN, T_END=TMIN + N_YEARS_RAMP)
 
         # make model errors and their covariance matrix
-        mod_errors, mod_error_covar = gen_noise_ts(AR_P, len(e.conc['CO2']),
-                                                   INT_VAR_STD,
-                                                   CORR_COEFFS=[0.2])
+        mod_errors, mod_error_covar = gen_noise_ts(Noise, len(e.conc['CO2']))
 
-        # true vector of controls: initial conditions, parameters, and model
-        # errors
-        controls_tr = np.hstack([np.array([T1_TR, T2_TR,
-                             Q_TR, T_R1_TR, T_R2_TR,
-                             L_TR, G_TR, EPS_TR, C1_TR, C2_TR, F1_CO2_TR,
-                             ALPHA_R1_TR, ALPHA_R2_TR, BETA_R1_TR, BETA_R2_TR]), mod_errors])
+        # true vector of controls for this window
+        controls_tr = Truth.get_augmented_truth_vector(mod_errors)
         
         # central value of priors on each parameter
-        theta_prior_cent = np.hstack([np.array([T1_CEN, T2_CEN,
-                                     Q_CEN, T_R1_CEN, T_R2_CEN,
-                                     L_CEN, G_CEN, EPS_CEN, C1_CEN, C2_CEN, F1_CO2_CEN,
-                                     ALPHA_R1_CEN, ALPHA_R2_CEN, BETA_R1_CEN, BETA_R2_CEN]),
-                                     np.zeros_like(mod_errors)])
+        controls_cen = Prior.get_augmented_cen_vector(np.zeros_like(mod_errors))
 
         # make true data path over this time window
-        data_tr_p, times = get_nonlin_path(e, controls_tr, TMIN, TMAX, DT)
+        data_tr_p, times = get_nonlin_path(e, controls_tr, args.tmin, TMAX, DT=1.0)
 
         # note stds of priors and obs
         OBS_T1_STD = 1.0  # observation noise in measuring T1/T2
