@@ -29,7 +29,7 @@ def main():
     logger.info(f"Git hash: {get_git_hash()}")
     logger.info(f"Running experiment with config: {args}")
 
-    # setup prior, truth, and noise dataclasses from config and arguments
+    # setup prior, truth, noise, and windowing dataclasses from config and arguments
     Noise = ClimateModelNoise.from_cli_and_yaml(args, NOISE_PATH)
     Truth = ClimateModelTruth.from_cli_and_yaml(args, TRUTH_PATH)
     Priors = ClimateModelPriors.from_cli_and_yaml_and_noise(args, PRIOR_PATH, Noise)

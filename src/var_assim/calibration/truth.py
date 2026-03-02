@@ -31,15 +31,15 @@ class ClimateModelTruth:
     F_EFF_GEO_TR: float
         
     # regional climate parameters
-    ALPHA_TR: list[float]
-    BETA_TR: list[float]
+    ALPHA_TR: list[float] | np.ndarray
+    BETA_TR: list[float] | np.ndarray
     THETA_TR: int
 
     # state initial conditions (filled in from warm start module)
     T1_TR: float
     T2_TR: float
     Q_TR: float
-    T_REG_TR: list[float]
+    T_REG_TR: list[float] | np.ndarray
 
     # vector of true values
     # must be in this order:
@@ -114,7 +114,7 @@ class ClimateModelTruth:
 
         return np.hstack([self.controls_tr, aug_vector])
 
-    def set_state_truth_from_warmstart(self, ws_results):
+    def set_state_truth_from_warmstart(self, ws_results: list | np.ndarray):
         """Set state initial condition truth values from warm start results.
         """
 

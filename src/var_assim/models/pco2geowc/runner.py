@@ -27,6 +27,7 @@ from var_assim.model_errors import gen_noise_ts
 from var_assim.postprocessing import process_simulation_window, make_master_datatree
 from var_assim.stats.covar import get_covar_white
 from var_assim.stats.draws import get_prior_draws
+from var_assim.warm_start import warm_start_simulation
 
 from var_assim.models.pco2geowc.dynamics import get_nonlin_path
 from var_assim.models.pco2geowc.obs import get_obs_from_dynamics
@@ -36,22 +37,10 @@ from var_assim.models.pco2geowc.parallelization import EnsembleMember, runner_4d
 def run_var_assim_experiment():
     pass
 
-def run_var_assim_experiment_wip(args, logger, cal):
+def run_var_assim_experiment_wip(logger, args, Prior, Truth, Noise, Windowing):
     # start dask
     c = start_dask(logger)
     logger.info(c)
-
-    # parse command line stuff
-    SCENARIO = sys.argv[1]
-    TMIN = int(sys.argv[2])
-    AR_P = int(sys.argv[3])
-    THETA = int(sys.argv[4])
-    ECS_TR = float(sys.argv[5])
-    DEG_PER_DEC = float(sys.argv[6])
-    N_YEARS_RAMP = int(sys.argv[7])
-    N_windows = int(sys.argv[8])
-    N_ENS = int(sys.argv[9])
-    SAVE_OUTPUT = int(sys.argv[10])
 
     # raise ECS warning
     if ECS_TR != 3.0:
@@ -124,41 +113,9 @@ def run_var_assim_experiment_wip(args, logger, cal):
 
     """WARM START MODULE.
     """
-    print("\n Warm starting model to get initial conditions for temperature, ocean heat content, and regional temperature...")
-    # "warm start" model to get the central estimates of the initial conditions
-    # for temperature in our start year
-    e_ws = EmissionsBaseline(SCENARIO, 1850, TMIN)
-
-    # make vector of parameters for warm start
-    # NOTE: the first five entries are the initial conditions of global mean temperature,
-    # global mean ocean temperature, ocean heat content, and two regional temperatures
-    # that we use pattern scaling to find: Tri = alpha_ri * T1 - beta_ri * geo_level.
-    # since geo_level = 0 in the warm start, these are all zero (since T1 = 0 at 1850).
-    theta_ws = np.hstack([np.array([0.0, 0.0, 0.0, 0.0, 0.0,
-                         L_TR, G_TR, EPS_TR, C1_TR, C2_TR, F1_CO2_TR,
-                         ALPHA_R1_TR, ALPHA_R2_TR, BETA_R1_TR, BETA_R2_TR]),
-                         np.zeros_like(e_ws.conc['CO2'])])
-
-    # make "warm start" to get true initial conditions
-    data_ws, _ = get_nonlin_path(e_ws, theta_ws, 1850, TMIN, DT)
-
-    # true initial conditions
-    T1_TR = data_ws[0, -1] # surface temperature at TMIN
-    T1_CEN = data_ws[0, -1] # central estimate is the truth
-
-    T2_TR = data_ws[1, -1]  # ocean layer temperature at TMIN
-    T2_CEN = data_ws[1, -1]  # central estimate is the truth
-
-    Q_TR = C1_TR * T1_TR + C2_TR * T2_TR  # OHC true value
-    Q_CEN = C1_CEN * T1_CEN + C2_CEN * T2_CEN  # OHC central estimate
-
-    T_R1_TR = ALPHA_R1_TR * T1_TR  # temperature in region 1 true value
-    T_R1_CEN = ALPHA_R1_CEN * T1_CEN  # central estimate, temperature in region 1
-
-    T_R2_TR = ALPHA_R2_TR * T1_TR  # temperature in region 2 true value
-    T_R2_CEN = ALPHA_R2_CEN * T1_CEN  # central estimate, temperature in region 2
+    logger.info("Starting warm start module")
     
-    print("Warm start complete!")
+    warm_start_simulation(logger, args, Truth, Prior, get_nonlin_path)
 
     print("==================================================================")
     print("Simulation attributes:")

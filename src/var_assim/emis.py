@@ -28,9 +28,10 @@ class EmissionsBaseline():
         maximum time for time series
     """
 
-    def __init__(self, scenario, t_min, t_max,
+    def __init__(self, logger, scenario, t_min, t_max,
                  geo=False, DEG_PER_DEC=0.1, LAMBDA=1.0, GAMMA=0.7, EPSILON=1.58, F_EFF_GEO=0.0,
                  T_START=2020, T_END=2070):
+        self.logger = logger
         self.scenario = scenario
         self.geo = geo  # whether or not this class should have geoengineering attributes
         self.DEG_PER_DEC = DEG_PER_DEC  # degrees C offset by geo per decade
@@ -67,13 +68,7 @@ class EmissionsBaseline():
             self.emis['geo'] = np.zeros_like(self.times_ext)  # no geoengineering
             self.forcing['geo'] = np.zeros_like(self.times_ext)  # no geo
 
-        print("\n------------------------------------------------------------------")
-        print("Emissions baseline for scenario {} created successfully.".format(self.scenario))
-        if self.geo:
-            print("This scenario has geoengineering beginning in {} that offsets {} deg C per decade".format(self.T_START, self.DEG_PER_DEC))
-        else:
-            print("This scenario does not include geoengineering.")
-        print("------------------------------------------------------------------\n")
+        self.logger.info(f"     Emissions baseline for {self.scenario} created")
 
     def _import_emissions_timeseries(self):
         """Import time series of emissions for each gas species.
@@ -91,7 +86,7 @@ class EmissionsBaseline():
 
         except FileNotFoundError:
             # if you don't find the file, download it and save it
-            print("Did not find data for emissions and/or concentrations, downloading it now...")
+            self.logger.info("    ⚠️ Did not find data for emissions and/or concentrations, fetching...")
             emis_file = pooch.retrieve(
                 url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
                 known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
@@ -107,8 +102,8 @@ class EmissionsBaseline():
             self.df_conc = pd.read_csv(conc_file)
 
             # save the downloaded file to .csv
-            print("\nSaved harmonized emissions data to:\n{}".format(EMIS_DATA_PATH))
-            print("\nSaved harmonized concentrations data to:\n{}".format(CONC_DATA_PATH))
+            self.logger.info(f"        Saved harmonized emissions data to: {EMIS_DATA_PATH}")
+            self.logger.info(f"        Saved harmonized concentrations data to: {CONC_DATA_PATH}")
             self.df_emis.to_csv(EMIS_DATA_PATH)
             self.df_conc.to_csv(CONC_DATA_PATH)
 
@@ -176,7 +171,6 @@ class EmissionsBaseline():
             # check if there are nans in this interpolated time series. if there are, shift the t_min window backwards
             # by the number of nan years, reinterpolate, and subselect relevant years of data
             if np.any(np.isnan(tmp_df_vals)):
-                print("Caught nans. Fixing...")
                 N_nans = len(np.where(np.isnan(tmp_df_vals))[0])
                 tmp_df_vals = tmp_df.loc[:,
                                      str(self.t_min - N_nans):str(self.t_max)].interpolate(axis=1).values[0]
@@ -209,7 +203,6 @@ class EmissionsBaseline():
             # check if there are nans in this interpolated time series. if there are, shift the t_min window backwards
             # by the number of nan years, reinterpolate, and subselect relevant years of data
             if np.any(np.isnan(tmp_df_vals)):
-                print("Caught nans. Fixing...")
                 N_nans = len(np.where(np.isnan(tmp_df_vals))[0])
                 tmp_df_vals = tmp_df.loc[:,
                                      str(self.t_min - N_nans):str(self.t_max)].interpolate(axis=1).values[0]
@@ -244,9 +237,10 @@ if __name__ == '__main__':
     # small test script to verify geoengineering forcing is being generated
     # correctly
     import sys 
+    from var_assim.logging_utils import setup_logger
     from pympler import asizeof
     import matplotlib.pyplot as plt
-    from model.globals import FIGS_DIR
+    from var_assim.config import FIGS_DIR
     # plt.style.use('ambpy')
 
     scenario = 'ssp245'
@@ -263,9 +257,10 @@ if __name__ == '__main__':
     tf = 2075
     geo_ts_emis = []
     geo_ts_force = []
+    log = setup_logger()
 
     for deg in degs_per_dec:
-        e = EmissionsBaseline(scenario, t_min, t_max,
+        e = EmissionsBaseline(log, scenario, t_min, t_max,
                     geo=geo, DEG_PER_DEC=deg, LAMBDA=LAM, GAMMA=GAM, EPSILON=EPS, F_EFF_GEO=F_EFF_GEO,
                     T_START=ts, T_END=tf)
         geo_ts_emis.append(e.emis['geo'])
