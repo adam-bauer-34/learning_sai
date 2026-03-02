@@ -24,6 +24,11 @@ PRIOR_PATH = Path(CONFIG["PRIOR_PATH"])
 NOISE_PATH = Path(CONFIG["NOISE_PATH"])
 WINDOW_PATH = Path(CONFIG["WINDOW_PATH"])
 
+OPT_CHAR_PATH = Path(__file__).parent.parent.parent / "config" / 'optimization.yaml'
+
+with open(OPT_CHAR_PATH, 'r') as f:
+    opt_config = yaml.safe_load(f)
+
 
 def parse_args():
     """Parse command line arguments for each experiment.
@@ -133,6 +138,13 @@ def parse_args():
         help='Is there nonzero noise in regional temperatures?'
     )
 
+    parser.add_argument(
+        "--check_components",
+        action='store_true',
+        default=False,
+        help='Check components of variational assimilation model (TLM, ADJ, grad J)?'
+    )
+
     # add debugging mode
     parser.add_argument(
         "--debug",
@@ -148,3 +160,5 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     print(args)
+
+    print(opt_config)
