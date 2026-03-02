@@ -127,7 +127,13 @@ class ClimateModelPriors:
         param_dict['Q_STD'] = (param_dict['C1_CEN'] + param_dict['C2_CEN']) * Noise.INT_VAR_STD
 
         # regional temperature vector
-        param_dict['T_REG_STD'] = np.array(param_dict['ALPHA_CEN']) * Noise.INT_VAR_STD
+        if cli_args.reg_noise:
+            # initial condition std adjusted to internal variability + regional variability
+            param_dict['T_REG_STD'] = np.array(param_dict['ALPHA_CEN']) * Noise.INT_VAR_STD + Noise.OBS_T_REG_STD
+
+        else:
+            # if no regional noise, just internal variability adjusts regional ICs
+            param_dict['T_REG_STD'] = np.array(param_dict['ALPHA_CEN']) * Noise.INT_VAR_STD
 
         param_dict['controls_cen'] = np.array([
             param_dict['T1_CEN'], param_dict['T2_CEN'], param_dict['Q_CEN'],
