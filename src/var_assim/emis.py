@@ -11,6 +11,10 @@ import numpy as np
 import pandas as pd 
 
 from var_assim.config import DATA_DIR
+#from var_assim.calibration.priors import ClimateModelPriors
+#from var_assim.calibration.truth import ClimateModelTruth
+from logging import Logger
+from argparse import Namespace
 
 
 class EmissionsBaseline():
@@ -28,26 +32,31 @@ class EmissionsBaseline():
         maximum time for time series
     """
 
-    def __init__(self, logger, scenario, t_min, t_max,
-                 geo=False, DEG_PER_DEC=0.1, LAMBDA=1.0, GAMMA=0.7, EPSILON=1.58, F_EFF_GEO=0.0,
-                 T_START=2020, T_END=2070):
+    def __init__(self, logger: Logger, args: Namespace,
+                 t_min: int, t_max: int,
+                 geo: bool = False, Prior: object = None,
+                 Truth: object = None, T_START: int = 2020, T_END: int = 2070):
+        
         self.logger = logger
-        self.scenario = scenario
+        self.scenario = args.scenario
+
+        self.t_min = int(t_min)
+        self.t_max = int(t_max)
+
         self.geo = geo  # whether or not this class should have geoengineering attributes
-        self.DEG_PER_DEC = DEG_PER_DEC  # degrees C offset by geo per decade
-        self.LAMBDA = LAMBDA  # climate feedback parameter, used to determine SAI rate
-        self.GAMMA = GAMMA  # ocean heat uptake efficiency
-        self.EPSILON = EPSILON  # pattern effect factor
-        self.F_EFF_GEO = F_EFF_GEO
+        self.DEG_PER_DEC = args.deg_p_dec  # degrees C offset by geo per decade
+        self.L = Prior.L_CEN
+        self.G = Prior.G_CEN
+        self.EPS = Prior.EPS_CEN
+        self.F_EFF_GEO = Truth.F_EFF_GEO_TR
+    
         self.T_START = int(T_START)  # year SAI begins
         self.T_END = int(T_END)  # year SAI levels out
         self.TOTAL_TEMP_OFFSET = self.DEG_PER_DEC * (self.T_END - self.T_START) / 10.  # total temperature offset for geo program
 
         # set time bounds for time series
-        self.t_min = int(t_min)
-        self.t_max = int(t_max)
         self.times = np.arange(self.t_min, self.t_max, 1)  # time range
-        self.times_ext = np.arange(self.t_min, self.t_max + 1, 1)  # time range
+        self.times_ext = np.arange(self.t_min, self.t_max + 1, 1)  # time range extended
 
         # step 1: import .csv containing emissions data
         self._import_emissions_timeseries()
@@ -221,7 +230,7 @@ class EmissionsBaseline():
         geo_constant_times = self.times_ext[self.times_ext >= self.T_END]
         
         # make SAI ramp up 
-        geo_ramp = (self.TOTAL_TEMP_OFFSET * (self.LAMBDA + self.GAMMA * self.EPSILON) / self.F_EFF_GEO) * (
+        geo_ramp = (self.TOTAL_TEMP_OFFSET * (self.L + self.G * self.EPS) / self.F_EFF_GEO) * (
             (geo_ramp_up_times - self.T_START) / (self.T_END - self.T_START)
             )
         
@@ -237,40 +246,45 @@ if __name__ == '__main__':
     # small test script to verify geoengineering forcing is being generated
     # correctly
     import sys 
+    from var_assim.config import parse_args
     from var_assim.logging_utils import setup_logger
-    from pympler import asizeof
+    
     import matplotlib.pyplot as plt
     from var_assim.config import FIGS_DIR
-    # plt.style.use('ambpy')
 
-    scenario = 'ssp245'
-    t_min = 2025
+    args = parse_args()
+    log = setup_logger()
+
     t_max = 2100
     geo = True
     degs_per_dec = [0.0, 0.5]
-    LAM = 4.58 * np.log(2) / 3.0  # feedback for ECS = 3.0
-    # print(LAM)
-    GAM = 0.7  # use central value
-    EPS = 1.58  # use central value
-    F_EFF_GEO = 0.09
+
+    class Prior:
+        def __init__(self):
+            self.L_CEN = 1.06
+            self.G_CEN = 0.7
+            self.EPS_CEN = 1.58
+
+    class Truth:
+        def __init__(self):
+            self.F_EFF_GEO_TR = 0.09
+
+    p = Prior()
+    t = Truth()
+
     ts = 2025
     tf = 2075
     geo_ts_emis = []
     geo_ts_force = []
-    log = setup_logger()
 
     for deg in degs_per_dec:
-        e = EmissionsBaseline(log, scenario, t_min, t_max,
-                    geo=geo, DEG_PER_DEC=deg, LAMBDA=LAM, GAMMA=GAM, EPSILON=EPS, F_EFF_GEO=F_EFF_GEO,
+        e = EmissionsBaseline(log, args, args.tmin, t_max,
+                    geo=geo, Prior=p, Truth=t,
                     T_START=ts, T_END=tf)
+        
         geo_ts_emis.append(e.emis['geo'])
         geo_ts_force.append(e.forcing['geo'])
 
-    print(asizeof.asizeof(e))
-
-    # print(e.conc['CO2'], e.forcing['geo'])
-
-    """
     fig, ax = plt.subplots(1, 2, figsize=(14, 6))
 
     for i in range(len(degs_per_dec)):
@@ -282,6 +296,6 @@ if __name__ == '__main__':
 
     ax[1].legend()
     
-    figpath = FIGS_DIR + 'checks/geo_emis.png'
+    figpath = FIGS_DIR / 'checks/geo_emis.png'
     fig.savefig(figpath, dpi=400)
-    print("Emissions baseline check figure saved to:\n {}".format(figpath))"""
+    print(f"Emissions baseline check figure saved to:\n {figpath}")

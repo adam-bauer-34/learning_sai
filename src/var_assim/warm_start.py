@@ -17,7 +17,7 @@ from var_assim.calibration.priors import ClimateModelPriors
 
 
 def warm_start_simulation(logger: logging.Logger,
-                          args: argparse.ArgumentParser,
+                          args: argparse.Namespace,
                           Truth: ClimateModelTruth,
                           Prior: ClimateModelPriors,
                           nonlin_path: Callable) -> np.ndarray:
