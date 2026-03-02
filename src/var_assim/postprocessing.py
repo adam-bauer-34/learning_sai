@@ -17,6 +17,7 @@ from var_assim.config import DATA_DIR
 
 
 def process_simulation_window(args: argparse.Namespace,
+                              var_names: list,
                               TMAX: int,
                               opt_ensmems,
                               obs: np.ndarray,
@@ -82,17 +83,6 @@ def process_simulation_window(args: argparse.Namespace,
     # make dataset for this assimilation window and save to dictionary that
     # we'll use to make a datatree later
 
-    # set variable names for saving based on which model equations we use
-    if args.model != 'pco2geowc3':
-        names = np.hstack([['T1', 'T2', 'Q', 'T_R1', 'T_R2', 'L', 'G', 'EPS', 'C1', 'C2', 'F1_CO2',
-                            'ALPHA_R1', 'ALPHA_R2', 'BETA_R1', 'BETA_R2'],
-                            ['q' + str(i) for i in range(len(times))]])
-    
-    else:
-        names = np.hstack([['T1', 'T2', 'Q', 'T_R1', 'T_R2', 'L', 'G', 'EPS', 'C1', 'C2', 'F1_CO2',
-                            'ALPHA_R1', 'ALPHA_R2', 'BETA_R1', 'BETA_R2', 'ALPHA_R3', 'BETA_R3'],
-                            ['q' + str(i) for i in range(len(times))]])
-
     # make attributes dictionary for clear dataset metadata
     cli_dict = {k: str(v) if isinstance(v, bool) else v for k, v in vars(args).items()}
     attrs = (
@@ -122,7 +112,7 @@ def process_simulation_window(args: argparse.Namespace,
                     coords={'time': (['time'], times),
                             'iter': (['iter'], np.arange(0, opt_chars['max_iter'] + 1,
                                                             1)),
-                            'vari': (['vari'], names),
+                            'vari': (['vari'], var_names),
                             'ens_mem': (['ens_mem'], np.arange(0, args.n_ens,
                                                                 1)),
                             'obs_var': (['obs_var'], ['T1', 'Q', 'T_R1', 'T_R2'])},
@@ -156,15 +146,15 @@ def make_master_datatree(logger: logging.Logger,
     if args.save_output:
         if not args.reg_noise:
             path = DATA_DIR / 'output' / args.model / (
-                f'var-assim-output_{args.scenario}_{args.model}_{args.windowing}_TMIN{args.tmin}'
-                f'_{args.noise_model}_THETA{args.theta}_ECS{args.ecs}'
-                f'_DEGpDEC{args.deg_p_dec}_NYRSRAMP{args.n_yrs_ramp}_{args.windowing}_Nens{args.n_ens}.nc'
+                f'var-assim-output_{args.scenario}_{args.model}_{args.windowing}_{args.noise_model}'
+                f'_TMIN{args.tmin}_THETA{args.theta}_ECS{args.ecs}'
+                f'_DEGpDEC{args.deg_p_dec}_NYRSRAMP{args.n_yrs_ramp}_Nens{args.n_ens}.nc'
             )
         
         else:
             path = DATA_DIR / 'output' / args.model / (
-                f'var-assim-output_{args.scenario}_{args.model}_{args.windowing}_TMIN{args.tmin}'
-                f'_{args.noise_model}+reg_THETA{args.theta}_ECS{args.ecs}'
+                f'var-assim-output_{args.scenario}_{args.model}_{args.windowing}_{args.noise_model}+reg'
+                f'_TMIN{args.tmin}_THETA{args.theta}_ECS{args.ecs}'
                 f'_DEGpDEC{args.deg_p_dec}_NYRSRAMP{args.n_yrs_ramp}_Nens{args.n_ens}.nc'
             )
 

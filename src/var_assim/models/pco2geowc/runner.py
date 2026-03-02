@@ -207,8 +207,14 @@ def run_var_assim_experiment(logger: logging.Logger, args: argparse.Namespace,
         logger.info(f"        >> Ensemble data assimilation solved in {RUNTIME} s")
 
         logger.info(f"        >> Processing simulation output")
+
+        # make variable names list for saving
+        var_names = np.hstack([['T1', 'T2', 'Q', 'T_R1', 'T_R2', 
+                                'L', 'G', 'EPS', 'C1', 'C2', 'F1_CO2',
+                                'ALPHA_R1', 'ALPHA_R2', 'BETA_R1', 'BETA_R2'],
+                                ['q' + str(i) for i in range(len(times))]])
         # process simulation output into 
-        ds = process_simulation_window(args, TMAX,
+        ds = process_simulation_window(args, var_names, TMAX,
                                        opt_ensmems, obs, data_tr_p,
                                        controls_tr, opt_config, RUNTIME)
 
