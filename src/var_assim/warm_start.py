@@ -22,7 +22,8 @@ def warm_start_simulation(logger: logging.Logger,
     
 
     # make warm start emissions baseline
-    e = EmissionsBaseline(logger, args.scenario, 1850, args.tmin)
+    e = EmissionsBaseline(logger, args, 1850, args.tmin, geo=False,
+                          Prior=Prior, Truth=Truth)
 
     # get true controls vector for model simulation
     controls_tr_aug = Truth.get_augmented_truth_vector(np.zeros_like(e.conc['CO2']))

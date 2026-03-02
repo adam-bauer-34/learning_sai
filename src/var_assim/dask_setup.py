@@ -29,12 +29,12 @@ def start_dask(logger):
     # if we're on slurm, set the number of CPUs based on SLURM config
     if on_slurm:
         cpus_available = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))
-        logger.info(f"Slurm environment detected. Using {cpus_available} allocated CPUs.")
+        logger.info(f"    > Slurm environment detected. Using {cpus_available} allocated CPUs.")
 
     # otherwise, we're on local, so use the number of cores minus one
     else:
         cpus_available = max(1, cpu_count() - 1)  # leave 1 core free locally
-        logger.info(f"Local environment detected. Using {cpus_available} of {cpu_count()} CPUs.")
+        logger.info(f"    > Local environment detected. Using {cpus_available} of {cpu_count()} CPUs.")
 
     # initialize local dask cluseter
     cluster = LocalCluster(
@@ -48,7 +48,7 @@ def start_dask(logger):
     client = Client(cluster)
 
     # print config details
-    logger.info(f"Dask Client started with {cpus_available} workers.")
-    logger.info(f"Dashboard link: {client.dashboard_link}")
+    logger.info(f"    > Dask Client started with {cpus_available} workers.")
+    logger.info(f"    > Dashboard link: {client.dashboard_link}")
 
     return client

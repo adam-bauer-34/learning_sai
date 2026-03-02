@@ -75,8 +75,8 @@ class ClimateModelTruth:
         param_dict = (
             param_dict
             | truth_data['global']
-            | {'T_REG_TR': truth_data[MODEL_REGISTRY[args.model]['N_regions']]['T_REG_TR']}
-            | truth_data[MODEL_REGISTRY[args.model]['N_regions']]['theta'][cli_args.theta]
+            | {'T_REG_TR': truth_data[MODEL_REGISTRY[cli_args.model]['N_regions']]['T_REG_TR']}
+            | truth_data[MODEL_REGISTRY[cli_args.model]['N_regions']]['theta'][cli_args.theta]
         )
 
         # set climate feedback truth based on central value of ECS and F1_CO2
@@ -124,7 +124,7 @@ class ClimateModelTruth:
         self.Q_TR = self.C1_TR * self.T1_TR + self.C2_TR * self.T2_TR
 
         # last entries are regional initial conditions
-        self.T_REG_TR = ws_results[3:]
+        self.T_REG_TR = ws_results[3:3+len(self.T_REG_TR)]
 
         # update true control vector with new ICs
         self._update_controls_tr()

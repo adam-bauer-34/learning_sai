@@ -3,10 +3,6 @@
 Adam Michael Bauer
 University of Illinois Urbana Champaign
 8.23.2024
-
-To run:
-    python main_margobs_pco2sulwc.py [scenario] [P] [L or F] [SIGMA]
-        [N_windows] [N_ENS] [SAVE_OUTPUT]
 """
 
 import sys
@@ -36,25 +32,21 @@ from var_assim.models.pco2geowc.obs import get_obs_from_dynamics
 from var_assim.models.pco2geowc.parallelization import EnsembleMember, runner_4dvar
 
 
-def run_var_assim_experiment():
-    pass
-
-
-def run_var_assim_experiment_wip(logger: logging.Logger, args: argparse.Namespace,
-                                 Prior: object, Truth: object,
-                                 Noise: object, Windowing: object):
+def run_var_assim_experiment(logger: logging.Logger, args: argparse.Namespace,
+                             Prior: object, Truth: object,
+                             Noise: object, Windowing: object):
     # start dask
     c = start_dask(logger)
-    logger.info(c)
+    logger.info(f"    > {c}")
 
     # set time discretization (always 1.0)
     DT = 1.0
 
     """WARM START MODULE.
     """
-    logger.info("    Starting warm start module")
+    logger.info("    > Starting warm start module")
     warm_start_simulation(logger, args, Truth, Prior, get_nonlin_path)
-    logger.info("    Warm start complete")
+    logger.info("    > Warm start complete")
 
     """ASSIMILATION MODULE
     """
@@ -62,7 +54,7 @@ def run_var_assim_experiment_wip(logger: logging.Logger, args: argparse.Namespac
     results_dict = {}
 
     for (TMIN, TMAX) in Windowing.windows:
-        logger.info(f"    Carrying out data assimilation for window {TMIN}-{TMAX}")
+        logger.info(f"    > Carrying out data assimilation for window {TMIN}-{TMAX}")
 
         # set seed so we get same draws for each assimilation window
         np.random.seed(1000)
@@ -70,13 +62,18 @@ def run_var_assim_experiment_wip(logger: logging.Logger, args: argparse.Namespac
         # make emissions baseline
         e = EmissionsBaseline(logger, args, TMIN, TMAX,
                               geo=True, Prior=Prior, Truth=Truth,
-                              T_START=TMIN, T_END=TMIN + args.n_yrs_ramp)
+                              T_START=TMIN, T_END=TMIN + args.n_yrs_ramp,
+                              print_level=2)
 
         # make model errors and their covariance matrix
         mod_errors, mod_error_covar = gen_noise_ts(Noise, len(e.conc['CO2']))
 
         # true vector of controls for this window
         controls_tr = Truth.get_augmented_truth_vector(mod_errors)
+
+        if args.debug:
+            logger.info(f"        >> (DEBUG) Controls vector: {controls_tr}")
+            logger.info(f"        >> (DEBUG) Controls vector length: {len(controls_tr)}")
         
         # central value of priors on each parameter
         controls_cen = Prior.get_augmented_cen_vector(np.zeros_like(mod_errors))
@@ -136,7 +133,7 @@ def run_var_assim_experiment_wip(logger: logging.Logger, args: argparse.Namespac
 
         # If flagged, check components of variational data assimilation module
         if args.check_components:
-            logger.info("        (FLAGGED) Checking TLM, ADJ, and cost function gradient accuracy")
+            logger.info("        >> (FLAGGED) Checking TLM, ADJ, and cost function gradient accuracy")
             run_component_checks(args, e, controls_tr, TMIN, TMAX,
                                  cost_args=[controls_tr,
                                             inv_covar_prior,
@@ -149,7 +146,8 @@ def run_var_assim_experiment_wip(logger: logging.Logger, args: argparse.Namespac
                                             TMIN,
                                             TMAX,
                                             DT])
-            logger.info(f"        (FLAGGED) Checks complete. .csv files saved to {DATA_DIR}/checks/{args.model}")
+            logger.info(f"        >> (FLAGGED) Checks complete")
+            logger.info(f"        >> (FLAGGED) .csv files saved to {DATA_DIR}/checks/{args.model}")
             
         # optimization parameters
         tol = opt_config['tol']
@@ -162,7 +160,7 @@ def run_var_assim_experiment_wip(logger: logging.Logger, args: argparse.Namespac
         
         # Check on object sizes
         if args.debug:
-            logger.info(f"        (DEBUG) Emissions object is of size: {sys.getsizeof(e) / 1e6} MB")
+            logger.info(f"        >> (DEBUG) Emissions object is of size: {sys.getsizeof(e) / 1e6} MB")
 
         # scatter emissions baseline class and true observations to each
         # dask worker 
@@ -187,14 +185,14 @@ def run_var_assim_experiment_wip(logger: logging.Logger, args: argparse.Namespac
                 else:
                     total += sys.getsizeof(v)
 
-            logger.info(f"        (DEBUG) Estimated total of on ensemble member: {total / 1e6} MB")
-            logger.info(f"        (DEBUG) Memory overhead for entire ensemble: {total * args.n_ens / 1e6} MB")
+            logger.info(f"        >> (DEBUG) Estimated total of on ensemble member: {total / 1e6} MB")
+            logger.info(f"        >> (DEBUG) Memory overhead for entire ensemble: {total * args.n_ens / 1e6} MB")
         
         # solve the assimilation using dask
         t0_assim = time.time()
 
         # do dask evaluation of runner
-        logger.info(f"        Solving data assimilation problem")
+        logger.info(f"        >> (TIME INTENSIVE) Carrying out inner and outer loops of variational data assimilation")
 
         # map and compute
         futures = [c.submit(runner_4dvar, m, e_scat)
@@ -206,9 +204,9 @@ def run_var_assim_experiment_wip(logger: logging.Logger, args: argparse.Namespac
         t1_assim = time.time()
 
         RUNTIME = t1_assim - t0_assim
-        logger.info(f"        Ensemble data assimilation solved in {RUNTIME} s")
+        logger.info(f"        >> Ensemble data assimilation solved in {RUNTIME} s")
 
-        logger.info(f"       Processing simulation output")
+        logger.info(f"        >> Processing simulation output")
         # process simulation output into 
         ds = process_simulation_window(args, TMAX,
                                        opt_ensmems, obs, data_tr_p,
@@ -216,7 +214,7 @@ def run_var_assim_experiment_wip(logger: logging.Logger, args: argparse.Namespac
 
         results_dict[str(TMAX)] = ds
 
-        logger.info(f"        Process for window {TMIN}-{TMAX} complete")
+        logger.info(f"        >> Process for window {TMIN}-{TMAX} complete")
 
     # synthesize datasets from each window into a datatree object
     make_master_datatree(logger, args, results_dict)

@@ -221,7 +221,7 @@ def _do_adj_id_check(args,
     df = pd.DataFrame(data)
 
     # save output to csv
-    datapath = DATA_DIR + "checks" / args.model / "adj_id_check.csv"
+    datapath = DATA_DIR / "checks" / args.model / "adj_id_check.csv"
 
     df.to_csv(datapath, sep=',', index=False)
 
@@ -297,6 +297,6 @@ def _do_grad_cost_check(args, cost, grad, control, cost_args,
     df = pd.DataFrame(data)
 
     # save to csv file
-    datapath = DATA_DIR + "checks" / args.model / "cost_grad_check.csv"
+    datapath = DATA_DIR / "checks" / args.model / "cost_grad_check.csv"
 
     df.to_csv(datapath, sep=',', index=False)

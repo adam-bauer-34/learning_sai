@@ -35,7 +35,8 @@ class EmissionsBaseline():
     def __init__(self, logger: Logger, args: Namespace,
                  t_min: int, t_max: int,
                  geo: bool = False, Prior: object = None,
-                 Truth: object = None, T_START: int = 2020, T_END: int = 2070):
+                 Truth: object = None, T_START: int = 2020, T_END: int = 2070,
+                 print_level: int = 1):
         
         self.logger = logger
         self.scenario = args.scenario
@@ -77,7 +78,14 @@ class EmissionsBaseline():
             self.emis['geo'] = np.zeros_like(self.times_ext)  # no geoengineering
             self.forcing['geo'] = np.zeros_like(self.times_ext)  # no geo
 
-        self.logger.info(f"     Emissions baseline for {self.scenario} created")
+        if print_level == 1:
+            self.logger.info(f"    > Emissions baseline for {self.scenario} created")
+        
+        elif print_level == 2:
+            self.logger.info(f"        >> Emissions baseline for {self.scenario} created")
+
+        else:
+            self.logger.info(f"Emissions baseline for {self.scenario} created")
 
     def _import_emissions_timeseries(self):
         """Import time series of emissions for each gas species.

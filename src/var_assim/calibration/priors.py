@@ -175,16 +175,13 @@ class ClimateModelPriors:
             maybe dict with relevant warm start characteristics?
         """
 
-        if len(ws_results[3:]) != len(self.T_REG_CEN):
-            raise ValueError("Mismatch between warm start results vector and number of regions in `Priors` object.")
-
         # set global climate central values
         self.T1_CEN = ws_results[0]
         self.T2_CEN = ws_results[1]
         self.Q_CEN = self.C1_CEN * self.T1_CEN + self.C2_CEN * self.T2_CEN
         
         # set retional climate central values
-        self.T_REG_CEN = ws_results[3:]
+        self.T_REG_CEN = ws_results[3:3+len(self.T_REG_STD)]
 
         # update master control vector
         self._update_controls_vectors()

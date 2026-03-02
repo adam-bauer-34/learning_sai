@@ -1,2 +1,2 @@
-max_iters: 100  # maximum var iterations
+max_iter: 100  # maximum var iterations
 tol: 0.01  # convergence criterion

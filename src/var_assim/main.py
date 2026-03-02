@@ -28,22 +28,22 @@ def main():
 
     # master print statement for logging and reproducibility
     logger.info(f"Git hash: {get_git_hash()}")
-    logger.info(f"Running experiment with config:\n")
-    logger.info(f"    Model equations: {args.model}")
-    logger.info(f"    Windowing config: {args.windowing}")
-    logger.info(f"    Socio-economic pathway: {args.scenario}")
-    logger.info(f"    Initial assimilation year: {args.tmin}")
-    logger.info(f"    Noise model for internal variability: {args.noise_model}")
-    logger.info(f"    True value of SAI angle parameter: {args.theta}")
-    logger.info(f"    True value of ECS: {args.ecs}")
+    logger.info(f"Running experiment with config:")
+    logger.info(f"    > Model equations: {args.model}")
+    logger.info(f"    > Windowing config: {args.windowing}")
+    logger.info(f"    > Socio-economic pathway: {args.scenario}")
+    logger.info(f"    > Initial assimilation year: {args.tmin}")
+    logger.info(f"    > Noise model for internal variability: {args.noise_model}")
+    logger.info(f"    > True value of SAI angle parameter: {args.theta}")
+    logger.info(f"    > True value of ECS: {args.ecs}")
     if args.ecs != 3.0:
-        logger.warning("        For ECS != 3.0, the F2x parameter, NOT λ, is altered.")
-    logger.info(f"    SAI offsets {args.deg_p_dec} deg C / decade and is ramped up over {args.n_yrs_ramp} years.")
-    logger.info(f"    Number of ensemble members: {args.n_ens}")
+        logger.warning("        > For ECS != 3.0, the F2x parameter, NOT λ, is altered.")
+    logger.info(f"    > SAI offsets {args.deg_p_dec} deg C / decade and is ramped up over {args.n_yrs_ramp} years.")
+    logger.info(f"    > Number of ensemble members: {args.n_ens}")
     if args.reg_noise:
-        logger.info(f"    There is regional noise in this model run.")
+        logger.info(f"    > There is regional noise in this model run.")
     else:
-        logger.info(f"    There is no regional noise in this model run.")
+        logger.info(f"    > There is no regional noise in this model run.")
 
     # setup prior, truth, noise, and windowing dataclasses from config and arguments
     Noise = ClimateModelNoise.from_cli_and_yaml(args, NOISE_PATH)

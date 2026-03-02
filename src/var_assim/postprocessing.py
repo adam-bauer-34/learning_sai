@@ -5,6 +5,7 @@ UChicago
 Feb 2026
 """
 
+import sys
 import argparse
 import logging
 
@@ -60,7 +61,7 @@ def process_simulation_window(args: argparse.Namespace,
     """
     
     # make times list
-    times = np.arange(args.tmin, TMAX, 1)
+    times = np.arange(args.tmin, TMAX + 1, 1)
 
     # parse optimal results into individual arrays
     data = np.array([m.data for m in opt_ensmems])
@@ -92,6 +93,14 @@ def process_simulation_window(args: argparse.Namespace,
                             'ALPHA_R1', 'ALPHA_R2', 'BETA_R1', 'BETA_R2', 'ALPHA_R3', 'BETA_R3'],
                             ['q' + str(i) for i in range(len(times))]])
 
+    # make attributes dictionary for clear dataset metadata
+    cli_dict = {k: str(v) if isinstance(v, bool) else v for k, v in vars(args).items()}
+    attrs = (
+        opt_chars | {'run_time': RUNTIME}
+        | cli_dict
+        | {'command': " ".join(sys.argv)}
+    )
+
     # make dataset with simulation results and return
     ds = xr.Dataset(data_vars={'data_final': (['ens_mem', 'vari', 'time'],
                                                 data),
@@ -111,16 +120,14 @@ def process_simulation_window(args: argparse.Namespace,
                                 'data_truth': (['vari', 'time'], data_tr_p),
                                 'controls_truth': (['vari'], controls_tr)},
                     coords={'time': (['time'], times),
-                            'iter': (['iter'], np.arange(0, opt_chars['max_iters'] + 1,
+                            'iter': (['iter'], np.arange(0, opt_chars['max_iter'] + 1,
                                                             1)),
                             'vari': (['vari'], names),
                             'ens_mem': (['ens_mem'], np.arange(0, args.n_ens,
                                                                 1)),
                             'obs_var': (['obs_var'], ['T1', 'Q', 'T_R1', 'T_R2'])},
-                    attrs={'max_iter': opt_chars['max_iters'],
-                            'tol': opt_chars['tol'],
-                            'run_time': RUNTIME})
-
+                    attrs=attrs)
+    
     return ds
 
 
@@ -149,22 +156,22 @@ def make_master_datatree(logger: logging.Logger,
     if args.save_output:
         if not args.reg_noise:
             path = DATA_DIR / 'output' / args.model / (
-                f'margobs_ws_{args.scenario}_{args.model}_TMIN{args.tmin}'
+                f'var-assim-output_{args.scenario}_{args.model}_{args.windowing}_TMIN{args.tmin}'
                 f'_{args.noise_model}_THETA{args.theta}_ECS{args.ecs}'
-                f'_DEGpDEC{args.deg_p_dec}_NYRSRAMP{args.n_yrs_ramp}_{args.windowing}_Nens{args.n_ens}'
+                f'_DEGpDEC{args.deg_p_dec}_NYRSRAMP{args.n_yrs_ramp}_{args.windowing}_Nens{args.n_ens}.nc'
             )
         
         else:
             path = DATA_DIR / 'output' / args.model / (
-                f'margobs_ws_{args.scenario}_{args.model}_TMIN{args.tmin}'
+                f'var-assim-output_{args.scenario}_{args.model}_{args.windowing}_TMIN{args.tmin}'
                 f'_{args.noise_model}+reg_THETA{args.theta}_ECS{args.ecs}'
-                f'_DEGpDEC{args.deg_p_dec}_NYRSRAMP{args.n_yrs_ramp}_{args.windowing}_Nens{args.n_ens}'
+                f'_DEGpDEC{args.deg_p_dec}_NYRSRAMP{args.n_yrs_ramp}_Nens{args.n_ens}.nc'
             )
 
         # report status and save to netcdf file
-        logger.info(f"    Output saved to: {path}")
+        logger.info(f"    > Output saved to: {path}")
         dt.to_netcdf(filepath=path, mode='w', format='NETCDF4', engine='netcdf4')
 
     else:
         # print output
-        logger.info(f"    Model simulation results:\n{dt}")
+        logger.info(f"    > Model simulation results:\n{dt}")
