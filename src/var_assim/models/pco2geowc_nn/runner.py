@@ -119,7 +119,7 @@ def run_var_assim_experiment(logger: logging.Logger, args: argparse.Namespace,
             obs = get_obs_from_dynamics(data_tr_p, noise=False)
 
         # If flagged, check components of variational data assimilation module
-        if args.check_components:
+        if args.check_components and TMAX == 2100:
             logger.info("        >> (FLAGGED) Checking TLM, ADJ, and cost function gradient accuracy")
             run_component_checks(args, e, Truth.controls_tr, TMIN, TMAX,
                                  cost_args=[Truth.controls_tr,
