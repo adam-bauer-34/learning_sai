@@ -171,6 +171,9 @@ def check_config_compatability(args):
     if args.model == 'pco2geowc_nn' and args.noise_model != 'nn':
         raise ValueError(f"{args.model} is not compatabile with any noise model other than 'nn'.")
 
+    if args.model != 'pco2geowc_nn' and args.noise_model == 'nn':
+        raise ValueError(f"{args.model} has internal variability, but no noise model ({args.noise_model}) was passed. Use 'AR1' or 'AR0'.")
+
 
 # quick test
 if __name__ == "__main__":

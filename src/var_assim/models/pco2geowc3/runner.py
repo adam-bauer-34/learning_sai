@@ -212,14 +212,16 @@ def run_var_assim_experiment(logger: logging.Logger, args: argparse.Namespace,
         logger.info(f"        >> Processing simulation output")
 
         # make variable names list for saving
-        var_names = np.hstack([['T1', 'T2', 'Q', 'T_R1', 'T_R2', 
+        var_names = np.hstack([['T1', 'T2', 'Q', 'T_R1', 'T_R2', 'T_R3',
                                 'L', 'G', 'EPS', 'C1', 'C2', 'F1_CO2',
                                 'ALPHA_R1', 'ALPHA_R2', 'ALPHA_R3',
                                 'BETA_R1', 'BETA_R2', 'BETA_R3'],
                                 ['q' + str(i) for i in range(len(times))]])
+    
+        obs_names = ['T1', 'Q', 'T_R1', 'T_R2', 'T_R3']
         
         # process simulation output into 
-        ds = process_simulation_window(args, var_names, TMAX,
+        ds = process_simulation_window(args, var_names, obs_names, TMAX,
                                        opt_ensmems, obs, data_tr_p,
                                        controls_tr, opt_config, RUNTIME)
 

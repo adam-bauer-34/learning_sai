@@ -200,8 +200,10 @@ def run_var_assim_experiment(logger: logging.Logger, args: argparse.Namespace,
                      'L', 'G', 'EPS', 'C1', 'C2', 'F1_CO2',
                      'ALPHA_R1', 'ALPHA_R2', 'BETA_R1', 'BETA_R2']
         
+        obs_names = ['T1', 'Q', 'T_R1', 'T_R2']
+        
         # process simulation output into 
-        ds = process_simulation_window(args, var_names, TMAX,
+        ds = process_simulation_window(args, var_names, obs_names, TMAX,
                                        opt_ensmems, obs, data_tr_p,
                                        Truth.controls_tr, opt_config, RUNTIME)
 

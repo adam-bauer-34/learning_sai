@@ -18,6 +18,7 @@ from var_assim.config import DATA_DIR
 
 def process_simulation_window(args: argparse.Namespace,
                               var_names: list | np.ndarray,
+                              obs_names: list | np.ndarray,
                               TMAX: int,
                               opt_ensmems,
                               obs: np.ndarray,
@@ -115,7 +116,7 @@ def process_simulation_window(args: argparse.Namespace,
                             'vari': (['vari'], var_names),
                             'ens_mem': (['ens_mem'], np.arange(0, args.n_ens,
                                                                 1)),
-                            'obs_var': (['obs_var'], ['T1', 'Q', 'T_R1', 'T_R2'])},
+                            'obs_var': (['obs_var'], obs_names)},
                     attrs=attrs)
     
     return ds
