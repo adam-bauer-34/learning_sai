@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from var_assim.config import DATA_DIR
+from pathlib import Path
 
 
 def run_component_checks(args, e, controls, TMIN, TMAX, cost_args, DT=1.0):
@@ -55,12 +56,16 @@ def run_component_checks(args, e, controls, TMIN, TMAX, cost_args, DT=1.0):
     # define upper and lower perturbation amounts
     ALPHA_MIN = 1e-16
     ALPHA_MAX = 1.0
+
+    # check to see if parent directory for data saving exists; if it doesn't, make it
+    check_dir = DATA_DIR / 'checks' / args.model
+    check_dir.mkdir(parents=True, exist_ok=True)
      
     # do each check: tlm, adj, and cost function gradient
     _do_tlm_check(args, get_nonlin_path, get_tlm_path, e, controls, TMIN, TMAX, DT, ALPHA_MIN, ALPHA_MAX)
 
     _do_adj_id_check(args, get_nonlin_path, get_tlm_path, get_adj_path, 
-                     e, controls, TMIN=2025, TMAX=2050, DT=DT)
+                     e, controls, TMIN=2025, TMAX=2100, DT=DT)
 
     _do_grad_cost_check(args, cost, grad, controls * 1.1, cost_args, ALPHA_MIN, ALPHA_MAX)
 
@@ -171,6 +176,7 @@ def _do_adj_id_check(args,
 
     get_tlm_path: callable
         function from model.dynamics, integrates the tangent linear model
+
     get_adj_path: callable
         function from model.adjoint, integrates adjoint path backwards in time
 

@@ -17,7 +17,7 @@ from var_assim.config import DATA_DIR
 
 
 def process_simulation_window(args: argparse.Namespace,
-                              var_names: list,
+                              var_names: list | np.ndarray,
                               TMAX: int,
                               opt_ensmems,
                               obs: np.ndarray,
