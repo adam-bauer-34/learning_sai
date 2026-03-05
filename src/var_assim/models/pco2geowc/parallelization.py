@@ -113,6 +113,8 @@ def runner_4dvar(mem, e):
         # solve optimization problem
         bounds = np.array([(-np.inf, np.inf) for cont in mem.control])
         bounds[5:13, 0] = 0  # L, G, EPS, C1, C2, F1, a1, a2 >= 0
+        bounds[15:, :] = (-1, 1)  # implicit bound on model errors of 3.62 sigma
+
 
         sol = minimize(cost, x0=mem.control,
                        args=[mem.control,

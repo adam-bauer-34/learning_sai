@@ -4,8 +4,8 @@ __pycache__/
 .DS_Store
 testing/
 batchers/
-no_array_sbatchs/
 data/
+no_array_sbatchs/
 
 # environments
 .env/
