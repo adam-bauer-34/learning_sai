@@ -1,0 +1,65 @@
+global:
+  # equilibrium climate sensitivity
+  ECS_CEN: 3.0  # default, can be changed in CLI
+
+  # ocean transport coefficient
+  G_CEN: 0.7
+  G_STD: None
+
+  # surface heat capacity
+  C1_CEN: 8.0
+  C1_STD: None
+
+  # deep ocean heat capacity
+  C2_CEN: 100.0
+  C2_STD: None
+
+  # forcing efficacy of co2
+  F1_CO2_CEN: 4.58
+  F1_CO2_STD: 0.519  # from Zelinka et al. (2020)
+
+  # climate feedback (set by ECS in dataclass initialization)
+  L_CEN: None
+  L_STD: None
+
+  # pattern effect parameter
+  EPS_CEN: 1.58
+  EPS_STD: 0.128  # from cummins et al. (2020)
+
+  # error factor for making other prior stds
+  PRIOR_STD_FACTOR: 0.3
+
+  # set a list of variables that need the PRIOR_STD_FACTOR to set their prior variances
+  factor_vars:
+    - [L_CEN, L_STD]
+    - [G_CEN, G_STD]
+    - [C1_CEN, C1_STD]
+    - [C2_CEN, C2_STD]
+
+  # add warm start dummy vars (will be overridden by warm start module)
+  T1_CEN: 0.0
+  T1_STD: None  # same size as internal variability, set on init of dc
+
+  T2_CEN: 0.0
+  T2_STD: None  # same size as internal variability, set on init of dc
+
+  Q_CEN: 0.0
+  Q_STD: None  # set on import T1_STD * (C1 + C2)
+
+two_region:
+  ALPHA_CEN: [2.0, 1.3]  # pattern scaling
+  BETA_CEN: [0.018, -0.018]  # sai adjustment
+  T_REG_CEN: [0.0, 0.0]  # regional temperature initial conditions
+
+  ALPHA_STD: [0.2, 0.13]
+  BETA_STD: [0.0055, 0.0055]
+  T_REG_STD: [None, None]
+
+three_region:
+  ALPHA_CEN: [2.0, 1.3, 1.5]  # pattern scaling
+  BETA_CEN: [0.018, -0.018, 0.153]  # sai adjustment
+  T_REG_CEN: [0.0, 0.0, 0.0]  # regional temperature initial conditions
+
+  ALPHA_STD: [0.2, 0.13, 0.15]
+  BETA_STD: [0.0055, 0.0055, 0.0055]
+  T_REG_STD: [None, None, None]

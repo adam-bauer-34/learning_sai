@@ -1,0 +1,19 @@
+name: var_assim_sai
+channels:
+  - conda-forge
+dependencies:
+  - dask
+  - ipykernel
+  - matplotlib=3.7.0
+  - nb_conda_kernels
+  - netcdf4
+  - numpy=1.23.5
+  - pandas=1.5.3
+  - pip
+  - pooch
+  - pympler
+  - scikit-learn
+  - scipy=1.10.1
+  - seaborn=0.12.2
+  - xarray=2022.11.0
+  - xarray-datatree=0.0.12

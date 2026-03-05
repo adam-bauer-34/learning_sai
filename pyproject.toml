@@ -1,0 +1,9 @@
+[project]
+name = "var_assim_for_sai_inequality"
+version = "0.1.0"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+var-assim = "var_assim.main:main"
