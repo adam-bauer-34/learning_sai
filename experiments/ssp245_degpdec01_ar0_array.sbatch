@@ -7,7 +7,7 @@
 #SBATCH --account=pi-bbcael
 #SBATCH --partition=caslake
 
-#SBATCH --time=24:00:00        
+#SBATCH --time=2:00:00        
 
 # --- ARRAY CONFIGURATION ---
 #SBATCH --array=0-5            
@@ -45,7 +45,7 @@ echo ""
 
 # Load environment
 module load python/miniforge-25.3.0
-source activate /project/bbcael/ambauer/learning_sai/.env
+source activate /project/bbcael/ambauer/envs/var_assim_sai
 
 # Prevent libraries from spawning their own threads
 export OMP_NUM_THREADS=1
@@ -56,7 +56,13 @@ export NUMEXPR_NUM_THREADS=1
 echo "Starting Array Task $SLURM_ARRAY_TASK_ID with Param $CURRENT_PARAM"
 
 # 3. Run the python command
-python -m model.main_margobs_pco2geowc_ws ssp245 2025 0 $CURRENT_PARAM 3.0 0.1 50 1 500 1  
+cd /project/bbcael/ambauer/learning_sai
+
+var-assim --model pco2geowc --windowing original --scenario ssp245\
+    --tmin 2025 --noise_model AR0 --theta $CURRENT_PARAM --ecs 3.0\
+    --deg_p_dec 0.1 --n_yrs_ramp 50 --n_ens 500 --save_output
+
+# python -m model.main_margobs_pco2geowc_ws ssp245 2025 0 $CURRENT_PARAM 3.0 0.1 50 1 500 1 
 
 EXIT_CODE=$?
 

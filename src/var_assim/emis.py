@@ -11,8 +11,6 @@ import numpy as np
 import pandas as pd 
 
 from var_assim.config import DATA_DIR
-#from var_assim.calibration.priors import ClimateModelPriors
-#from var_assim.calibration.truth import ClimateModelTruth
 from logging import Logger
 from argparse import Namespace
 
