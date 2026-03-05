@@ -1,8 +1,7 @@
+# general
 __pycache__/
 .DS_Store
 testing/
-batchers/
-no_array_sbatchs/
 
 # environments
 .env/
@@ -14,7 +13,7 @@ no_array_sbatchs/
 build/
 dist/
 
-# other directories
+# other directories that can be large / superfluous
 logs/
 data/
 figs/
