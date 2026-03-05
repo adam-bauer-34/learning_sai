@@ -1,10 +1,7 @@
-cmip6_data/
-logs/
 __pycache__/
 .DS_Store
 testing/
 batchers/
-data/
 no_array_sbatchs/
 
 # environments
@@ -16,3 +13,9 @@ no_array_sbatchs/
 *.egg
 build/
 dist/
+
+# other directories
+logs/
+data/
+figs/
+old/
