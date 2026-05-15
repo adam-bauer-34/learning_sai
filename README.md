@@ -12,7 +12,7 @@ This repository implements variational data assimilation experiments designed to
 - Three supported model variants:
   - `pco2geowc`: two-region climate model with internal variability
   - `pco2geowc3`: three-region climate model
-  - `pco2geowc_nn`: neural network noise model (two-region)
+  - `pco2geowc_nn`: no noise model (two-region)
 - Configurable observation noise models: `AR1`, `AR0`, and `nn`
 - Regional noise support for regional temperature observations
 - Warm start and ensemble-based initialization
