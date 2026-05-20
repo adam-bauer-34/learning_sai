@@ -141,7 +141,8 @@ def run_var_assim_experiment(logger: logging.Logger, args: argparse.Namespace,
         max_iter = opt_config['max_iter']
 
         # give first guess at initial conditions
-        theta_prior = get_prior_draws(Prior.controls_cen,
+        theta_prior = get_prior_draws(args.model,
+                                      Prior.controls_cen,
                                       np.linalg.inv(inv_covar_prior),
                                       args.n_ens)
         
