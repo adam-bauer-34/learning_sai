@@ -806,3 +806,6 @@ def batch_filter_datasets(
             gc.collect()
     
     return filtered_datasets
+
+def filter_by_max_conceivable(angles, MAX_CONCEIVABLE_ANGLE):
+    return np.where(angles > MAX_CONCEIVABLE_ANGLE, np.nan, angles)

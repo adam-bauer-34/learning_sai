@@ -1,8 +1,9 @@
 # where input, output, and checks data go
 DATA_DIR: data
+DATA_DIR_ABS: /project/bbcael/ambauer/learning_sai/data
 
-# where to store figures
-FIGS_DIR: analysis/figs
+# where to store figure
+FIGS_DIR: /project/bbcael/ambauer/learning_sai/analysis/figs
 
 # paths to config files
 TRUTH_PATH: config/truth.yaml
