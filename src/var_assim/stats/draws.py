@@ -7,34 +7,28 @@ University of Illinois Urbana-Champaign
 
 import numpy as np
 
+# lambda, gamma, C1, C2, and F1CO2 are nonneg
+nonneg_two_region_inds = [5, 6, 8, 9, 10]
+nonneg_three_region_inds = [x + 1 for x in nonneg_two_region_inds]
 
-def get_prior_draws(means, covar, N):
+def get_prior_draws(model, means, covar, N):
     prior_vec = np.random.multivariate_normal(means, covar, size=N)
 
     # manually correct parameters that have unphysical bounds. testing suggests
     # that most of the time the parameters aren't outside this range, and so
     # I'll just relocate to the mean for now.
 
-    ## L >= 0
-    prior_vec[:, 3] = np.where(prior_vec[:, 3] < 0, means[3], prior_vec[:, 3])
+    # if three regions, use the shifted indices
+    if model == 'pco2geowc3':
+        for ind in nonneg_three_region_inds:
+            prior_vec[:, ind] = np.where(
+                prior_vec[:, ind] < 0, means[ind], prior_vec[:, ind]
+            )
 
-    ## G >= 0
-    prior_vec[:, 4] = np.where(prior_vec[:, 4] < 0, means[4], prior_vec[:, 4])
-
-    ## C1 >= 0
-    prior_vec[:, 5] = np.where(prior_vec[:, 5] < 0, means[5], prior_vec[:, 5])
-
-    ## C2 >= 0
-    prior_vec[:, 6] = np.where(prior_vec[:, 6] < 0, means[6], prior_vec[:, 6])
-
-    ## F1_CO2 >= 0
-    prior_vec[:, 7] = np.where(prior_vec[:, 7] < 0, means[7], prior_vec[:, 7])
-
-    ## F3_CO2 >= 0
-    prior_vec[:, 8] = np.where(prior_vec[:, 8] < 0, means[8], prior_vec[:, 8])
-
-    ## C_SO2 >= 0
-    prior_vec[:, 11] = np.where(prior_vec[:, 11] < 0, means[11], prior_vec[:,
-                                                                           11])
+    else:
+        for ind in nonneg_two_region_inds:
+            prior_vec[:, ind] = np.where(
+                prior_vec[:, ind] < 0, means[ind], prior_vec[:, ind]
+            )
 
     return prior_vec
