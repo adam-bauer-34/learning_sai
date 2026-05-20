@@ -32,7 +32,7 @@ class AssimilationWindowing:
             command line arguements for main file
 
         windowing_path: Path
-            path to noise.yaml
+            path to windowing.yaml
 
         Returns
         -------

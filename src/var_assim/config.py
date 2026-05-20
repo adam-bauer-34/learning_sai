@@ -17,12 +17,13 @@ with open(CONFIG_PATH, "r") as f:
     CONFIG = yaml.safe_load(f)
 
 DATA_DIR = Path(CONFIG["DATA_DIR"])
+DATA_DIR_ABS = Path(CONFIG["DATA_DIR_ABS"])
 FIGS_DIR = Path(CONFIG["FIGS_DIR"])
 
-TRUTH_PATH = Path(CONFIG["TRUTH_PATH"])
-PRIOR_PATH = Path(CONFIG["PRIOR_PATH"])
-NOISE_PATH = Path(CONFIG["NOISE_PATH"])
-WINDOW_PATH = Path(CONFIG["WINDOW_PATH"])
+TRUTH_PATH = CONFIG_PATH.parent.parent / Path(CONFIG["TRUTH_PATH"])
+PRIOR_PATH = CONFIG_PATH.parent.parent / Path(CONFIG["PRIOR_PATH"])
+NOISE_PATH = CONFIG_PATH.parent.parent / Path(CONFIG["NOISE_PATH"])
+WINDOW_PATH = CONFIG_PATH.parent.parent / Path(CONFIG["WINDOW_PATH"])
 
 OPT_CHAR_PATH = Path(__file__).parent.parent.parent / "config" / 'optimization.yaml'
 
