@@ -19,6 +19,7 @@ with open(CONFIG_PATH, "r") as f:
 DATA_DIR = Path(CONFIG["DATA_DIR"])
 DATA_DIR_ABS = Path(CONFIG["DATA_DIR_ABS"])
 FIGS_DIR = Path(CONFIG["FIGS_DIR"])
+PERF_REPS_PATH = Path(CONFIG["PERF_REPS_PATH"])
 
 TRUTH_PATH = CONFIG_PATH.parent.parent / Path(CONFIG["TRUTH_PATH"])
 PRIOR_PATH = CONFIG_PATH.parent.parent / Path(CONFIG["PRIOR_PATH"])
@@ -164,6 +165,11 @@ def check_config_compatability(args):
     if args.model != "pco2geowc_nn" and args.noise_model == "nn":
         raise ValueError(
             f"{args.model} has internal variability, but no noise model ({args.noise_model}) was passed. Use 'AR1' or 'AR0'."
+        )
+
+    if args.windowing == "ws_gradual" and args.tmin != 2023:
+        raise ValueError(
+            f"Windowing scheme {args.windowing} is designed for a warm start beginning in 2023. Please set --tmin to 2023."
         )
 
 

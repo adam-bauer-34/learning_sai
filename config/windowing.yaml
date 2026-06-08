@@ -13,3 +13,7 @@ original:
 # four evenly spaced windows (middle ground for testing and full runs)
 four:
   windows: [2040, 2060, 2080, 2100]
+
+# gradual ramp up with a small warm start
+ws_gradual:
+  windows: [2023, 2025, 2030, 2035, 2040, 2050, 2060, 2075, 2100]

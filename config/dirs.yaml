@@ -5,6 +5,9 @@ DATA_DIR_ABS: /project/bbcael/ambauer/learning_sai/data
 # where to store figure
 FIGS_DIR: /project/bbcael/ambauer/learning_sai/analysis/figs
 
+# performance reports for dask
+PERF_REPS_PATH: experiments/perf_reports
+
 # paths to config files
 TRUTH_PATH: config/truth.yaml
 PRIOR_PATH: config/priors.yaml
