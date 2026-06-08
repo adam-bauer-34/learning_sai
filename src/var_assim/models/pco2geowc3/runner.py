@@ -260,7 +260,7 @@ def run_var_assim_experiment(
         ):
             # map and compute
             futures = [c.submit(runner_4dvar, m, e_scat) for m in ensemble_members]
-            opt_ensmems = [future.results() for future in as_completed(futures)]
+            opt_ensmems = [future.result() for future in as_completed(futures)]
 
         t1_assim = time.time()
 
