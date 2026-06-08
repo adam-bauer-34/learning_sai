@@ -8,14 +8,14 @@ University of Illinois Urbana-Champaign
 import pooch
 
 import numpy as np
-import pandas as pd 
+import pandas as pd
 
 from var_assim.config import DATA_DIR
 from logging import Logger
 from argparse import Namespace
 
 
-class EmissionsBaseline():
+class EmissionsBaseline:
     """Emissions baseline class.
 
     Parameters
@@ -30,28 +30,40 @@ class EmissionsBaseline():
         maximum time for time series
     """
 
-    def __init__(self, logger: Logger, args: Namespace,
-                 t_min: int, t_max: int,
-                 geo: bool = False, Prior: object = None,
-                 Truth: object = None, T_START: int = 2020, T_END: int = 2070,
-                 print_level: int = 1):
-        
+    def __init__(
+        self,
+        logger: Logger,
+        args: Namespace,
+        t_min: int,
+        t_max: int,
+        geo: bool = False,
+        Prior: object = None,
+        Truth: object = None,
+        T_START: int = 2020,
+        T_END: int = 2070,
+        print_level: int = 1,
+    ):
+
         self.logger = logger
         self.scenario = args.scenario
 
         self.t_min = int(t_min)
         self.t_max = int(t_max)
 
-        self.geo = geo  # whether or not this class should have geoengineering attributes
+        self.geo = (
+            geo  # whether or not this class should have geoengineering attributes
+        )
         self.DEG_PER_DEC = args.deg_p_dec  # degrees C offset by geo per decade
         self.L = Prior.L_CEN
         self.G = Prior.G_CEN
         self.EPS = Prior.EPS_CEN
         self.F_EFF_GEO = Truth.F_EFF_GEO_TR
-    
+
         self.T_START = int(T_START)  # year SAI begins
         self.T_END = int(T_END)  # year SAI levels out
-        self.TOTAL_TEMP_OFFSET = self.DEG_PER_DEC * (self.T_END - self.T_START) / 10.  # total temperature offset for geo program
+        self.TOTAL_TEMP_OFFSET = (
+            self.DEG_PER_DEC * (self.T_END - self.T_START) / 10.0
+        )  # total temperature offset for geo program
 
         # set time bounds for time series
         self.times = np.arange(self.t_min, self.t_max, 1)  # time range
@@ -61,9 +73,12 @@ class EmissionsBaseline():
         self._import_emissions_timeseries()
 
         # step 1a: check if i passed a valid scenario
-        if np.all(self.scenario != self.df_emis['Scenario'].unique()):
-            raise ValueError("Invalid scenario. Valid scenarios are:\n{}."
-                             .format(self.df_emis['Scenario'].unique()))
+        if np.all(self.scenario != self.df_emis["Scenario"].unique()):
+            raise ValueError(
+                "Invalid scenario. Valid scenarios are:\n{}.".format(
+                    self.df_emis["Scenario"].unique()
+                )
+            )
 
         # step 2: parse the big dataframe into individual gas time series
         self._parse_species()
@@ -71,27 +86,28 @@ class EmissionsBaseline():
         # step 3: if we care about geoengineering, include those emissions
         if self.geo:
             self._make_geo_time_series()
-        
+
         else:
-            self.emis['geo'] = np.zeros_like(self.times_ext)  # no geoengineering
-            self.forcing['geo'] = np.zeros_like(self.times_ext)  # no geo
+            self.emis["geo"] = np.zeros_like(self.times_ext)  # no geoengineering
+            self.forcing["geo"] = np.zeros_like(self.times_ext)  # no geo
 
         if print_level == 1:
             self.logger.info(f"    > Emissions baseline for {self.scenario} created")
-        
+
         elif print_level == 2:
-            self.logger.info(f"        >> Emissions baseline for {self.scenario} created")
+            self.logger.info(
+                f"        >> Emissions baseline for {self.scenario} created"
+            )
 
         else:
             self.logger.info(f"Emissions baseline for {self.scenario} created")
 
     def _import_emissions_timeseries(self):
-        """Import time series of emissions for each gas species.
-        """
+        """Import time series of emissions for each gas species."""
 
         # get current working directory and set path
-        EMIS_DATA_PATH = DATA_DIR / 'input' / 'rcmip_emissions_data.csv'
-        CONC_DATA_PATH = DATA_DIR / 'input' / 'rcmip_conc_data.csv'
+        EMIS_DATA_PATH = DATA_DIR / "input" / "rcmip_emissions_data.csv"
+        CONC_DATA_PATH = DATA_DIR / "input" / "rcmip_conc_data.csv"
 
         # try to import data. if it doesn't exist, we accept a file not found
         # error, and download the file from Zenodo
@@ -101,7 +117,9 @@ class EmissionsBaseline():
 
         except FileNotFoundError:
             # if you don't find the file, download it and save it
-            self.logger.info("    ⚠️ Did not find data for emissions and/or concentrations, fetching...")
+            self.logger.info(
+                "    ⚠️ Did not find data for emissions and/or concentrations, fetching..."
+            )
             emis_file = pooch.retrieve(
                 url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
                 known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
@@ -117,33 +135,43 @@ class EmissionsBaseline():
             self.df_conc = pd.read_csv(conc_file)
 
             # save the downloaded file to .csv
-            self.logger.info(f"        Saved harmonized emissions data to: {EMIS_DATA_PATH}")
-            self.logger.info(f"        Saved harmonized concentrations data to: {CONC_DATA_PATH}")
+            self.logger.info(
+                f"        Saved harmonized emissions data to: {EMIS_DATA_PATH}"
+            )
+            self.logger.info(
+                f"        Saved harmonized concentrations data to: {CONC_DATA_PATH}"
+            )
             self.df_emis.to_csv(EMIS_DATA_PATH)
             self.df_conc.to_csv(CONC_DATA_PATH)
 
     def _parse_species(self):
-        """Parse dataframe to only have emissions for gases we care about.
-        """
+        """Parse dataframe to only have emissions for gases we care about."""
 
         # passed as an init, but for now, i'm leaving it here
         # emis keywords are needed for aerosols, concentrations are for
         # greenhouse gases
-        self.emis_keywords = ['Emissions|BC', 'Emissions|Sulfur',
-                             'Emissions|OC', 'Emissions|CO2']
+        self.emis_keywords = [
+            "Emissions|BC",
+            "Emissions|Sulfur",
+            "Emissions|OC",
+            "Emissions|CO2",
+        ]
 
         # truncate Emissions| bit from each gas label in the RCMIP file
-        self.emis_keywords_trunc = [i.replace('Emissions|', '') for i in
-                                    self.emis_keywords]
+        self.emis_keywords_trunc = [
+            i.replace("Emissions|", "") for i in self.emis_keywords
+        ]
 
-        self.conc_keywords = ['Atmospheric Concentrations|N2O',
-                              'Atmospheric Concentrations|CO2',
-                              'Atmospheric Concentrations|CH4']
+        self.conc_keywords = [
+            "Atmospheric Concentrations|N2O",
+            "Atmospheric Concentrations|CO2",
+            "Atmospheric Concentrations|CH4",
+        ]
 
         # truncate Emissions| bit from each gas label in the RCMIP file
-        self.conc_keywords_trunc = [i.replace('Atmospheric Concentrations|',
-                                              '')
-                                    for i in self.conc_keywords]
+        self.conc_keywords_trunc = [
+            i.replace("Atmospheric Concentrations|", "") for i in self.conc_keywords
+        ]
 
         # now make dictionary of gas time series for our scenario
         self.emis = {}
@@ -159,36 +187,45 @@ class EmissionsBaseline():
 
             # pull time series of gas
             # NOTE: we're interested in World emissions for CMIP6
-            tmp_df = self.df_emis.loc[(self.df_emis['Scenario'] ==
-                                       self.scenario)
-                                      & (self.df_emis['Region'] == 'World')
-                                      & (self.df_emis['Mip_Era'] == 'CMIP6')
-                                      & (self.df_emis['Variable'] == tmp_spec)]
+            tmp_df = self.df_emis.loc[
+                (self.df_emis["Scenario"] == self.scenario)
+                & (self.df_emis["Region"] == "World")
+                & (self.df_emis["Mip_Era"] == "CMIP6")
+                & (self.df_emis["Variable"] == tmp_spec)
+            ]
 
             # extract time values between 1750 and 2100
-            # NOTE 1: for future emissions, we're not given annual emissions, 
+            # NOTE 1: for future emissions, we're not given annual emissions,
             # but rather emissions on ten year intervals. so we interpolate
             # over the NaNs in the selected time range linearly.
 
             # NOTE 2: N2O is in kt N2O / yr, so we change it to Mt N2O / yr to
-            # match all the other species 
+            # match all the other species
 
-            if tmp_spec != 'Emissions|N2O':
-                tmp_df_vals = tmp_df.loc[:,
-                                         str(self.t_min):str(self.t_max)].interpolate(axis=1).values[0]
-                self.ref_emis[tmp_spec_trunc] = np.mean(tmp_df.loc[:, str(1750):str(1850)].values)
+            if tmp_spec != "Emissions|N2O":
+                tmp_df_vals = (
+                    tmp_df.loc[:, str(self.t_min) : str(self.t_max)]
+                    .interpolate(axis=1)
+                    .values[0]
+                )
+                self.ref_emis[tmp_spec_trunc] = np.mean(
+                    tmp_df.loc[:, str(1750) : str(1850)].values
+                )
 
             else:
-                tmp_df_vals = tmp_df.loc[:,
-                                         str(self.t_min):str(self.t_max)].interpolate(axis=1).values[0]\
-                                * (1/1000.)
-            
+                tmp_df_vals = tmp_df.loc[
+                    :, str(self.t_min) : str(self.t_max)
+                ].interpolate(axis=1).values[0] * (1 / 1000.0)
+
             # check if there are nans in this interpolated time series. if there are, shift the t_min window backwards
             # by the number of nan years, reinterpolate, and subselect relevant years of data
             if np.any(np.isnan(tmp_df_vals)):
                 N_nans = len(np.where(np.isnan(tmp_df_vals))[0])
-                tmp_df_vals = tmp_df.loc[:,
-                                     str(self.t_min - N_nans):str(self.t_max)].interpolate(axis=1).values[0]
+                tmp_df_vals = (
+                    tmp_df.loc[:, str(self.t_min - N_nans) : str(self.t_max)]
+                    .interpolate(axis=1)
+                    .values[0]
+                )
                 tmp_df_vals = tmp_df_vals[N_nans:]
 
             # save to dictionary of species
@@ -202,27 +239,33 @@ class EmissionsBaseline():
 
             # pull time series of gas
             # NOTE: we're interested in World emissions for CMIP6
-            tmp_df = self.df_conc.loc[(self.df_conc['Scenario'] ==
-                                       self.scenario)
-                                      & (self.df_conc['Region'] == 'World')
-                                      & (self.df_conc['Mip_Era'] == 'CMIP6')
-                                      & (self.df_conc['Variable'] == tmp_spec)]
+            tmp_df = self.df_conc.loc[
+                (self.df_conc["Scenario"] == self.scenario)
+                & (self.df_conc["Region"] == "World")
+                & (self.df_conc["Mip_Era"] == "CMIP6")
+                & (self.df_conc["Variable"] == tmp_spec)
+            ]
 
-            # NOTE 1: for future emissions, we're not given annual emissions, 
+            # NOTE 1: for future emissions, we're not given annual emissions,
             # but rather emissions on ten year intervals. so we interpolate
             # over the NaNs in the selected time range linearly.
-            tmp_df_vals = tmp_df.loc[:,
-                                     str(self.t_min):str(self.t_max)].interpolate(axis=1).values[0]
+            tmp_df_vals = (
+                tmp_df.loc[:, str(self.t_min) : str(self.t_max)]
+                .interpolate(axis=1)
+                .values[0]
+            )
             # print(tmp_df_vals)
-            
+
             # check if there are nans in this interpolated time series. if there are, shift the t_min window backwards
             # by the number of nan years, reinterpolate, and subselect relevant years of data
             if np.any(np.isnan(tmp_df_vals)):
                 N_nans = len(np.where(np.isnan(tmp_df_vals))[0])
-                tmp_df_vals = tmp_df.loc[:,
-                                     str(self.t_min - N_nans):str(self.t_max)].interpolate(axis=1).values[0]
+                tmp_df_vals = (
+                    tmp_df.loc[:, str(self.t_min - N_nans) : str(self.t_max)]
+                    .interpolate(axis=1)
+                    .values[0]
+                )
                 tmp_df_vals = tmp_df_vals[N_nans:]
-
 
             # save to dictionary of species
             self.conc[tmp_spec_trunc] = tmp_df_vals
@@ -230,31 +273,33 @@ class EmissionsBaseline():
     def _make_geo_time_series(self):
         # add sulfur emissions from geoengineering
         # times where geoengineering is ramped up
-        geo_ramp_up_times = self.times_ext[(self.times_ext >= self.T_START) 
-                                            & (self.times_ext < self.T_END)]
-        # times where SAI is held constant 
+        geo_ramp_up_times = self.times_ext[
+            (self.times_ext >= self.T_START) & (self.times_ext < self.T_END)
+        ]
+        # times where SAI is held constant
         geo_constant_times = self.times_ext[self.times_ext >= self.T_END]
-        
-        # make SAI ramp up 
-        geo_ramp = (self.TOTAL_TEMP_OFFSET * (self.L + self.G * self.EPS) / self.F_EFF_GEO) * (
-            (geo_ramp_up_times - self.T_START) / (self.T_END - self.T_START)
-            )
-        
+
+        # make SAI ramp up
+        geo_ramp = (
+            self.TOTAL_TEMP_OFFSET * (self.L + self.G * self.EPS) / self.F_EFF_GEO
+        ) * ((geo_ramp_up_times - self.T_START) / (self.T_END - self.T_START))
+
         # set remaining years of SAI to final t levels
         geo_constant = np.ones(len(geo_constant_times), dtype=float) * geo_ramp[-1]
-        
+
         # stack the arrays together and store in class attributes
         geo_emissions = np.hstack([geo_ramp, geo_constant])
-        self.emis['geo'] = geo_emissions
-        self.forcing['geo'] = - self.F_EFF_GEO * self.emis['geo']
+        self.emis["geo"] = geo_emissions
+        self.forcing["geo"] = -self.F_EFF_GEO * self.emis["geo"]
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # small test script to verify geoengineering forcing is being generated
     # correctly
-    import sys 
+    import sys
     from var_assim.config import parse_args
     from var_assim.logging_utils import setup_logger
-    
+
     import matplotlib.pyplot as plt
     from var_assim.config import FIGS_DIR
 
@@ -284,24 +329,32 @@ if __name__ == '__main__':
     geo_ts_force = []
 
     for deg in degs_per_dec:
-        e = EmissionsBaseline(log, args, args.tmin, t_max,
-                    geo=geo, Prior=p, Truth=t,
-                    T_START=ts, T_END=tf)
-        
-        geo_ts_emis.append(e.emis['geo'])
-        geo_ts_force.append(e.forcing['geo'])
+        e = EmissionsBaseline(
+            log, args, args.tmin, t_max, geo=geo, Prior=p, Truth=t, T_START=ts, T_END=tf
+        )
+
+        geo_ts_emis.append(e.emis["geo"])
+        geo_ts_force.append(e.forcing["geo"])
 
     fig, ax = plt.subplots(1, 2, figsize=(14, 6))
 
     for i in range(len(degs_per_dec)):
-        ax[0].plot(e.times_ext, geo_ts_emis[i], label=str(degs_per_dec[i]) + ' deg C per decade')
-        ax[1].plot(e.times_ext, geo_ts_force[i], label=str(degs_per_dec[i]) + ' deg C per decade')
+        ax[0].plot(
+            e.times_ext,
+            geo_ts_emis[i],
+            label=str(degs_per_dec[i]) + " deg C per decade",
+        )
+        ax[1].plot(
+            e.times_ext,
+            geo_ts_force[i],
+            label=str(degs_per_dec[i]) + " deg C per decade",
+        )
 
     ax[0].set_ylabel("Emissions (MtSO$_2$)")
     ax[1].set_ylabel("Forcing (W m$^{-2}$)")
 
     ax[1].legend()
-    
-    figpath = FIGS_DIR / 'checks/geo_emis.png'
+
+    figpath = FIGS_DIR / "checks/geo_emis.png"
     fig.savefig(figpath, dpi=400)
     print(f"Emissions baseline check figure saved to:\n {figpath}")

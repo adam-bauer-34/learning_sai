@@ -14,27 +14,29 @@ from typing import Callable
 from var_assim.emis import EmissionsBaseline
 
 
-def warm_start_simulation(logger: logging.Logger,
-                          args: argparse.Namespace,
-                          Truth: object,
-                          Prior: object,
-                          nonlin_path: Callable):
-    
-    # make warm start emissions baseline
-    e = EmissionsBaseline(logger, args, 1850, args.tmin, geo=False,
-                          Prior=Prior, Truth=Truth)
+def warm_start_simulation(
+    logger: logging.Logger,
+    args: argparse.Namespace,
+    Truth: object,
+    Prior: object,
+    nonlin_path: Callable,
+):
 
-    if args.model != 'pco2geowc_nn':
+    # make warm start emissions baseline
+    e = EmissionsBaseline(
+        logger, args, 1850, args.tmin, geo=False, Prior=Prior, Truth=Truth
+    )
+
+    if args.model != "pco2geowc_nn":
         # get true controls vector for model simulation
-        controls_tr_aug = Truth.get_augmented_truth_vector(np.zeros_like(e.conc['CO2']))
-    
+        controls_tr_aug = Truth.get_augmented_truth_vector(np.zeros_like(e.conc["CO2"]))
+
     else:
         # when model has no noise, don't augment the truth vector
         controls_tr_aug = Truth.controls_tr.copy()
 
     # simulate model equations over warm start period
-    paths_ws, _ = nonlin_path(e, controls_tr_aug, 1850,
-                              args.tmin, DT=1.0)
+    paths_ws, _ = nonlin_path(e, controls_tr_aug, 1850, args.tmin, DT=1.0)
 
     # set true values and central values according to internal functions of
     # `Truth` and `Priors`

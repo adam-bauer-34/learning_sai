@@ -30,17 +30,21 @@ def gen_noise_ts(Noise, N_times):
         model error covariance matrix
     """
 
-    if Noise.NOISE_MODEL == 'AR0':
-        model_error_covar = get_covar_white(np.array([Noise.INT_VAR_STD] * N_times),
-                                            N_times)
+    if Noise.NOISE_MODEL == "AR0":
+        model_error_covar = get_covar_white(
+            np.array([Noise.INT_VAR_STD] * N_times), N_times
+        )
 
-    elif Noise.NOISE_MODEL == 'AR1':
+    elif Noise.NOISE_MODEL == "AR1":
         model_error_covar = get_covar_ar1(Noise.INT_VAR_STD, Noise.AUTO_CORR, N_times)
 
     else:
-        raise ValueError("Invalid noise model. Only AR(0) and AR(1) are currently implemented.")
+        raise ValueError(
+            "Invalid noise model. Only AR(0) and AR(1) are currently implemented."
+        )
 
-    model_errors = np.random.multivariate_normal(np.array([0.0] * N_times),
-                                                 model_error_covar)
+    model_errors = np.random.multivariate_normal(
+        np.array([0.0] * N_times), model_error_covar
+    )
 
     return model_errors, model_error_covar

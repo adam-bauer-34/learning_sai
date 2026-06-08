@@ -7,7 +7,14 @@ Feb 2026
 
 import time
 
-from var_assim.config import parse_args, check_config_compatability, TRUTH_PATH, PRIOR_PATH, NOISE_PATH, WINDOW_PATH
+from var_assim.config import (
+    parse_args,
+    check_config_compatability,
+    TRUTH_PATH,
+    PRIOR_PATH,
+    NOISE_PATH,
+    WINDOW_PATH,
+)
 from var_assim.logging_utils import setup_logger, get_git_hash
 from var_assim.models import MODEL_REGISTRY
 from var_assim.calibration.truth import ClimateModelTruth
@@ -17,8 +24,7 @@ from var_assim.calibration.windowing import AssimilationWindowing
 
 
 def main():
-    """Main function for simulation setup and running.
-    """
+    """Main function for simulation setup and running."""
 
     # parse arguments and check compatability
     args = parse_args()
@@ -40,8 +46,12 @@ def main():
     logger.info(f"    > True value of SAI angle parameter: {args.theta}")
     logger.info(f"    > True value of ECS: {args.ecs}")
     if args.ecs != 3.0:
-        logger.warning("        > For ECS != 3.0, the F2x parameter, NOT λ, is altered.")
-    logger.info(f"    > SAI offsets {args.deg_p_dec} deg C / decade and is ramped up over {args.n_yrs_ramp} years.")
+        logger.warning(
+            "        > For ECS != 3.0, the F2x parameter, NOT λ, is altered."
+        )
+    logger.info(
+        f"    > SAI offsets {args.deg_p_dec} deg C / decade and is ramped up over {args.n_yrs_ramp} years."
+    )
     logger.info(f"    > Number of ensemble members: {args.n_ens}")
     if args.reg_noise:
         logger.info(f"    > There is regional noise in this model run.")
@@ -57,9 +67,11 @@ def main():
     # run variational data assimilation experiment with passed model
     try:
         logger.info("Running main assimilation experiment")
-        run_var_assim_experiment = MODEL_REGISTRY[args.model]['runner']
+        run_var_assim_experiment = MODEL_REGISTRY[args.model]["runner"]
     except KeyError:
-        raise ValueError(f"Model {args.model} doesn't exist in model registry:\n{MODEL_REGISTRY}")
+        raise ValueError(
+            f"Model {args.model} doesn't exist in model registry:\n{MODEL_REGISTRY}"
+        )
 
     run_var_assim_experiment(logger, args, Priors, Truth, Noise, Windowing)
 
@@ -68,6 +80,7 @@ def main():
     # log finish
     logger.info("Experiment complete.")
     logger.info(f"Total runtime: {t1 - t0:.2f}s.")
+
 
 if __name__ == "__main__":
     main()

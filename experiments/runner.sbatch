@@ -17,7 +17,6 @@
 #SBATCH --mem=30G
 # ---------------------------
 
-#SBATCH --mail-type=FAIL,END,START
 #SBATCH --mail-user=ambauer@rcc.uchicago.edu
 
 # Ensure logs directory exists

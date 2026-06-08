@@ -21,11 +21,13 @@ color_list = ['#000000', '#E69F00', '#56B4E9', '#009E73', '#F0E442',
 
 def make_grid_plot(angles, angles_tr, angles_prior, angles_names,
                    winds, PLO, PHI, row_titles,
-                   save_figs=False, fname='bias_error_grid'):
+                   save_figs=False, fname='bias_error_grid',
+                   YLIM_OFFSET=2):
     
     # extract plot dimensions
-    NROWS, NANGS, _, _ = np.shape(angles) 
-
+    NROWS, NANGS, _, _ = np.shape(angles)
+    PRIOR_RANGE = np.nanpercentile(angles_prior, PHI) - np.nanpercentile(angles_prior, PLO)
+    Y_UB = YLIM_OFFSET + PRIOR_RANGE
     # set up
     fig, ax = plt.subplots(NROWS, 3, figsize=(30, 30), sharex=True)
 
@@ -56,8 +58,7 @@ def make_grid_plot(angles, angles_tr, angles_prior, angles_names,
         ax[rowx, 1].set_ylabel(r"med$(\vartheta) - \vartheta^\dagger$ (Degrees)")
         ax[rowx, 1].axhline(0, color='k', linestyle='solid')
         ax[rowx, 2].set_ylabel(f"{PLO}–{PHI} Percentile Range (Degrees)")
-        ax[rowx, 2].set_ylim((0,
-                              5 + np.nanpercentile(angles_prior, PHI) - np.nanpercentile(angles_prior, PLO)))
+        ax[rowx, 2].set_ylim((0, Y_UB))
 
     # set x labels for only bottom row
     for a in ax[NROWS-1]:
@@ -73,7 +74,7 @@ def make_grid_plot(angles, angles_tr, angles_prior, angles_names,
         ax2_rel = ax[rowx, 2].twinx()
         ax2_rel.set_ylabel(f"Relative {PLO}–{PHI} Range (vs prior)")
         ax2_rel.spines['right'].set_visible(True)
-        ax2_rel.set_ylim((0, (2 + np.nanpercentile(angles_prior, PHI) - np.nanpercentile(angles_prior, PLO)) / (np.nanpercentile(angles_prior, PHI) - np.nanpercentile(angles_prior, PLO))))
+        ax2_rel.set_ylim((0, Y_UB / PRIOR_RANGE))
 
     # set legend
     ax[0, 0].legend(bbox_to_anchor=(3.87, -0.82), ncols=1, frameon=True)
@@ -246,6 +247,7 @@ def test_make_grid_plot():
         angles=angles,
         angles_tr=angles_tr,
         angles_prior=angles_prior,
+        angles_names=angles_tr,
         winds=winds,
         PLO=PLO,
         PHI=PHI,

@@ -9,19 +9,22 @@ import logging
 import sys
 import subprocess
 
+
 def get_git_hash():
-    """Get the current git hash for reproducibility.
-    """
+    """Get the current git hash for reproducibility."""
     try:
-        git_hash = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("utf-8").strip()
+        git_hash = (
+            subprocess.check_output(["git", "rev-parse", "HEAD"])
+            .decode("utf-8")
+            .strip()
+        )
     except Exception as e:
         git_hash = "unknown"
     return git_hash
 
 
 def setup_logger(debug=False):
-    """Set up a logger for the experiment.
-    """
+    """Set up a logger for the experiment."""
 
     logger = logging.getLogger("var_assim")
 
@@ -32,8 +35,7 @@ def setup_logger(debug=False):
     logger.propagate = False
 
     formatter = logging.Formatter(
-        "%(asctime)s | %(levelname)s | %(message)s",
-        "%Y-%m-%d %H:%M:%S"
+        "%(asctime)s | %(levelname)s | %(message)s", "%Y-%m-%d %H:%M:%S"
     )
 
     stdout_handler = logging.StreamHandler(sys.stdout)
