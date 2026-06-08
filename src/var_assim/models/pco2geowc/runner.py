@@ -17,7 +17,7 @@ import argparse
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 import numpy as np
-from dask.distributed import performance_report
+from dask.distributed import performance_report, as_completed
 
 from var_assim.dask_setup import start_dask
 from var_assim.warm_start import warm_start_simulation
@@ -257,9 +257,7 @@ def run_var_assim_experiment(
         ):
             # map and compute
             futures = [c.submit(runner_4dvar, m, e_scat) for m in ensemble_members]
-
-            # gather results
-            opt_ensmems = c.gather(futures)
+            opt_ensmems = [future.results() for future in as_completed(futures)]
 
         t1_assim = time.time()
 
