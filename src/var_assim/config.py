@@ -106,7 +106,7 @@ def parse_args():
         "--windowing",
         type=str,
         default="original",
-        choices=["original", "debug", "fine_grad_coarse", "four"],
+        choices=["original", "debug", "fine_grad_coarse", "four", "ws_gradual"],
         help="Assimilation window name; config pulled from config/windowing.yaml.",
     )
 
