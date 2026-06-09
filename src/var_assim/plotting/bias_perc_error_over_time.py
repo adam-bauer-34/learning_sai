@@ -16,17 +16,37 @@ from var_assim.plotting.filtering import filter_datatree_by_cost_ratio_memeff
 from var_assim.plotting.utils import make_figure_filename
 from var_assim.config import FIGS_DIR
 
-color_list = ['#000000', '#E69F00', '#56B4E9', '#009E73', '#F0E442',
-              '#0072B2', '#CC79A7', '#D55E00']
+color_list = [
+    "#000000",
+    "#E69F00",
+    "#56B4E9",
+    "#009E73",
+    "#F0E442",
+    "#0072B2",
+    "#CC79A7",
+    "#D55E00",
+]
 
-def make_grid_plot(angles, angles_tr, angles_prior, angles_names,
-                   winds, PLO, PHI, row_titles,
-                   save_figs=False, fname='bias_error_grid',
-                   YLIM_OFFSET=2):
-    
+
+def make_grid_plot(
+    angles,
+    angles_tr,
+    angles_prior,
+    angles_names,
+    winds,
+    PLO,
+    PHI,
+    row_titles,
+    save_figs=False,
+    fname="bias_error_grid",
+    YLIM_OFFSET=2,
+):
+
     # extract plot dimensions
     NROWS, NANGS, _, _ = np.shape(angles)
-    PRIOR_RANGE = np.nanpercentile(angles_prior, PHI) - np.nanpercentile(angles_prior, PLO)
+    PRIOR_RANGE = np.nanpercentile(angles_prior, PHI) - np.nanpercentile(
+        angles_prior, PLO
+    )
     Y_UB = YLIM_OFFSET + PRIOR_RANGE
     # set up
     fig, ax = plt.subplots(NROWS, 3, figsize=(30, 30), sharex=True)
@@ -34,56 +54,79 @@ def make_grid_plot(angles, angles_tr, angles_prior, angles_names,
     # data plotting
     for rowx in range(ax.shape[0]):
         for angx in range(NANGS):
-            ax[rowx, 0].plot(winds,
-                            np.nanmedian(angles[rowx, angx], axis=1),
-                            linestyle='solid', color=color_list[angx+1],
-                            label=r'$\vartheta^\dagger=${}$^\circ$'.format(angles_names[angx]),
-                            zorder=100)
-            
-            ax[rowx, 0].axhline(angles_tr[angx],
-                               linestyle='dashed', linewidth=1.25,
-                               color=color_list[angx+1])
-            
-            ax[rowx, 1].plot(winds, np.nanmedian(angles[rowx, angx], axis=1) - angles_tr[angx],
-                            color=color_list[angx+1], zorder=100, linestyle='solid')
-            
+            ax[rowx, 0].plot(
+                winds,
+                np.nanmedian(angles[rowx, angx], axis=1),
+                linestyle="solid",
+                color=color_list[angx + 1],
+                label=r"$\vartheta^\dagger=${}$^\circ$".format(angles_names[angx]),
+                zorder=100,
+            )
+
+            ax[rowx, 0].axhline(
+                angles_tr[angx],
+                linestyle="dashed",
+                linewidth=1.25,
+                color=color_list[angx + 1],
+            )
+
+            ax[rowx, 1].plot(
+                winds,
+                np.nanmedian(angles[rowx, angx], axis=1) - angles_tr[angx],
+                color=color_list[angx + 1],
+                zorder=100,
+                linestyle="solid",
+            )
+
             ax[rowx, 2].plot(
-                winds, np.nanpercentile(angles[rowx, angx], PHI, axis=1) - np.nanpercentile(angles[rowx, angx], PLO, axis=1),
-                zorder=100, color=color_list[angx+1], linestyle='solid'
+                winds,
+                np.nanpercentile(angles[rowx, angx], PHI, axis=1)
+                - np.nanpercentile(angles[rowx, angx], PLO, axis=1),
+                zorder=100,
+                color=color_list[angx + 1],
+                linestyle="solid",
             )
 
     # Set y labels, horizontal line, and y limit
     for rowx in range(NROWS):
         ax[rowx, 0].set_ylabel(r"med$(\vartheta)$ (Degrees)")
         ax[rowx, 1].set_ylabel(r"med$(\vartheta) - \vartheta^\dagger$ (Degrees)")
-        ax[rowx, 1].axhline(0, color='k', linestyle='solid')
+        ax[rowx, 1].axhline(0, color="k", linestyle="solid")
         ax[rowx, 2].set_ylabel(f"{PLO}–{PHI} Percentile Range (Degrees)")
         ax[rowx, 2].set_ylim((0, Y_UB))
 
     # set x labels for only bottom row
-    for a in ax[NROWS-1]:
+    for a in ax[NROWS - 1]:
         a.set_xlabel("Year")
 
     # set vertical lines for assimilations windows
     for a in ax.flatten():
         for w in winds:
-            a.axvline(w, linestyle='dotted', color='grey', linewidth=1.25)
+            a.axvline(w, linestyle="dotted", color="grey", linewidth=1.25)
 
     # set twin y axis in leftmost panels
     for rowx in range(ax.shape[0]):
         ax2_rel = ax[rowx, 2].twinx()
         ax2_rel.set_ylabel(f"Relative {PLO}–{PHI} Range (vs prior)")
-        ax2_rel.spines['right'].set_visible(True)
+        ax2_rel.spines["right"].set_visible(True)
         ax2_rel.set_ylim((0, Y_UB / PRIOR_RANGE))
 
     # set legend
     ax[0, 0].legend(bbox_to_anchor=(3.87, -0.82), ncols=1, frameon=True)
 
     # set panel labels
-    panel_labels = list(string.ascii_uppercase)[:len(ax.flatten())]
+    panel_labels = list(string.ascii_uppercase)[: len(ax.flatten())]
     for a, label in zip(ax.flatten(), panel_labels):
-        a.text(0.925, 0.98, label, transform=a.transAxes,
-            fontsize=20, fontweight='bold', va='top', ha='left')
+        a.text(
+            0.925,
+            0.98,
+            label,
+            transform=a.transAxes,
+            fontsize=20,
+            fontweight="bold",
+            va="top",
+            ha="left",
+        )
 
     # set row titles
     for rowx, title in enumerate(row_titles):
@@ -92,28 +135,23 @@ def make_grid_plot(angles, angles_tr, angles_prior, angles_names,
         y = ax[rowx, 1].get_position().y1 + 0.01
 
         fig.text(
-            0.5, y,
-            title,
-            ha='center',
-            va='bottom',
-            fontsize=18,
-            fontweight='bold'
+            0.5, y, title, ha="center", va="bottom", fontsize=18, fontweight="bold"
         )
 
     if save_figs:
-        filename = make_figure_filename(
-            fname, outdir=FIGS_DIR / 'results'
-        )
-        fig.savefig(filename, dpi=300, bbox_inches='tight')
+        filename = make_figure_filename(fname, outdir=FIGS_DIR / "results")
+        fig.savefig(filename, dpi=300, bbox_inches="tight")
         print(f"Figure saved to: {filename}")
 
     return fig, ax
 
 
-def make_cleaned_datatree_list(fnames: list,
-                               angles: list,
-                               dropped_vars: list,
-                               THRESHOLD: float = 1e-2,):
+def make_cleaned_datatree_list(
+    fnames: list,
+    angles: list,
+    dropped_vars: list,
+    THRESHOLD: float = 1e-2,
+):
     """Open datatrees, drop unnecessary variables, and filter by initial vs
     final cost function values.
 
@@ -138,11 +176,11 @@ def make_cleaned_datatree_list(fnames: list,
 
     for idx, f in enumerate(fnames):
         print(f"Processing angle = {angles[idx]}...")
-        dt = open_datatree(f, engine='netcdf4', drop_variables=dropped_vars)
-    
-        dt_clean = filter_datatree_by_cost_ratio_memeff(dt, 
-                                                        threshold=THRESHOLD,
-                                                        clear_after_each_node=True)
+        dt = open_datatree(f, engine="netcdf4", drop_variables=dropped_vars)
+
+        dt_clean = filter_datatree_by_cost_ratio_memeff(
+            dt, threshold=THRESHOLD, clear_after_each_node=True
+        )
         dts.append(dt_clean)
 
         # cleanup
@@ -184,11 +222,7 @@ def test_make_grid_plot():
     # ---------------------------------
     # prior ensemble
     # ---------------------------------
-    angles_prior = rng.normal(
-        loc=35,
-        scale=18,
-        size=5000
-    )
+    angles_prior = rng.normal(loc=35, scale=18, size=5000)
 
     # ---------------------------------
     # synthetic posterior ensembles
@@ -214,13 +248,7 @@ def test_make_grid_plot():
 
                 # ensemble
                 angles[rowx, angx, windx] = (
-                    truth
-                    + bias
-                    + rng.normal(
-                        loc=0,
-                        scale=noise_scale,
-                        size=NSAMPLES
-                    )
+                    truth + bias + rng.normal(loc=0, scale=noise_scale, size=NSAMPLES)
                 )
 
     # ---------------------------------
@@ -233,12 +261,7 @@ def test_make_grid_plot():
     # row titles
     # ---------------------------------
     global row_titles
-    row_titles = [
-        "Baseline",
-        "Weak Constraint",
-        "Strong Constraint",
-        "No Noise Model"
-    ]
+    row_titles = ["Baseline", "Weak Constraint", "Strong Constraint", "No Noise Model"]
 
     # ---------------------------------
     # call plotting function
@@ -251,9 +274,9 @@ def test_make_grid_plot():
         winds=winds,
         PLO=PLO,
         PHI=PHI,
-        row_titles=['row'] * NROWS,
+        row_titles=["row"] * NROWS,
         save_figs=False,
-        fname='test_bias_error_grid'
+        fname="test_bias_error_grid",
     )
 
     plt.show()

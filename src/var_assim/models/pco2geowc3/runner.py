@@ -17,9 +17,9 @@ import argparse
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 import numpy as np
-from dask.distributed import performance_report, as_completed
+from dask.distributed import performance_report
 
-from var_assim.dask_setup import start_dask
+from var_assim.dask import start_dask, run_ensemble
 from var_assim.warm_start import warm_start_simulation
 from var_assim.emis import EmissionsBaseline
 from var_assim.model_errors import gen_noise_ts
@@ -258,9 +258,7 @@ def run_var_assim_experiment(
         with performance_report(
             filename=f"{PERF_REPS_PATH}/perf_report_{SLURM_JOB_ID}.html"
         ):
-            # map and compute
-            futures = [c.submit(runner_4dvar, m, e_scat) for m in ensemble_members]
-            opt_ensmems = [future.result() for future in as_completed(futures)]
+            opt_ensmems = run_ensemble(c, ensemble_members, e_scat, args, runner_4dvar)
 
         t1_assim = time.time()
 
