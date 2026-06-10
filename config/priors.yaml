@@ -24,7 +24,7 @@ global:
 
   # pattern effect parameter
   EPS_CEN: 1.58
-  EPS_STD: 0.128  # from cummins et al. (2020)
+  EPS_STD: 0.128  # from Cummins et al. (2020)
 
   # error factor for making other prior stds
   PRIOR_STD_FACTOR: 0.3

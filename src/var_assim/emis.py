@@ -10,7 +10,7 @@ import pooch
 import numpy as np
 import pandas as pd
 
-from var_assim.config import DATA_DIR
+from var_assim.config import DATA_DIR_ABS
 from logging import Logger
 from argparse import Namespace
 
@@ -106,8 +106,8 @@ class EmissionsBaseline:
         """Import time series of emissions for each gas species."""
 
         # get current working directory and set path
-        EMIS_DATA_PATH = DATA_DIR / "input" / "rcmip_emissions_data.csv"
-        CONC_DATA_PATH = DATA_DIR / "input" / "rcmip_conc_data.csv"
+        EMIS_DATA_PATH = DATA_DIR_ABS / "input" / "rcmip_emissions_data.csv"
+        CONC_DATA_PATH = DATA_DIR_ABS / "input" / "rcmip_conc_data.csv"
 
         # try to import data. if it doesn't exist, we accept a file not found
         # error, and download the file from Zenodo

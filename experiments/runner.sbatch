@@ -53,7 +53,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # 1. Define the parameter array
-PARAMS=(9 12 14 17 21 33)
+PARAMS=(5 11 15 21 30 35)
 CURRENT_PARAM=${PARAMS[$SLURM_ARRAY_TASK_ID]}
 
 # --------------------------------
