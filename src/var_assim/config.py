@@ -76,8 +76,7 @@ def parse_args():
     parser.add_argument(
         "--theta",
         type=int,
-        default=14,
-        choices=[9, 12, 14, 17, 21, 33],
+        default=15,
         help="The true SAI angle parameter to estimate",
     )
 
