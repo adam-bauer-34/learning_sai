@@ -66,7 +66,7 @@ def run_var_assim_experiment(
         logger.info(f"    > Carrying out data assimilation for window {TMIN}-{TMAX}")
 
         # set seed so we get same draws for each assimilation window
-        np.random.seed(1000)
+        np.random.seed(43)
 
         # make emissions baseline
         e = EmissionsBaseline(
