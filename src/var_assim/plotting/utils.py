@@ -10,8 +10,8 @@ import warnings
 from pathlib import Path
 from datetime import date
 
-def make_figure_filename(name: str, outdir: Path,
-                         ext: str = 'png') -> str:
+
+def make_figure_filename(name: str, outdir: Path, ext: str = "png") -> str:
     """Generate a filename like outdir/yyyy-mm-dd-name.ext.
 
     Useful for saving figures to disk during analysis.
@@ -34,7 +34,7 @@ def make_figure_filename(name: str, outdir: Path,
         figure filename of the form yyyy-mm-dd-name.ext
     """
 
-    today = date.today().strftime('%Y-%m-%d')
+    today = date.today().strftime("%Y-%m-%d")
     filename = f"{today}-{name}.{ext}"
     if outdir:
         # Since this is under-the-hood, I want to be very thorough, so add a
@@ -42,8 +42,10 @@ def make_figure_filename(name: str, outdir: Path,
         if os.path.isdir(outdir):
             return os.path.join(outdir, filename)
         else:
-            warnings.warn('WARNING: The outdir you specified does not exist.')
-            warnings.warn('Making new direcotry at {}'.format(Path(os.getcwd()) / outdir))
+            warnings.warn("WARNING: The outdir you specified does not exist.")
+            warnings.warn(
+                "Making new direcotry at {}".format(Path(os.getcwd()) / outdir)
+            )
             os.makedirs(outdir, exist_ok=True)
             return os.path.join(outdir, filename)
 
