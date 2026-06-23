@@ -57,6 +57,9 @@ def run_var_assim_experiment(
     warm_start_simulation(logger, args, Truth, Prior, get_nonlin_path)
     logger.info("    > Warm start complete")
 
+    # generate parameter prior based on warm start results
+    Prior.gen_parameter_prior(args.n_ens)
+
     """ASSIMILATION MODULE
     """
     # dictionary to make datatree out of later

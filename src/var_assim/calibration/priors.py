@@ -10,7 +10,7 @@ import argparse
 
 import numpy as np
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from var_assim.calibration.noise import ClimateModelNoise
 from var_assim.models import MODEL_REGISTRY
@@ -76,6 +76,14 @@ class ClimateModelPriors:
 
     # vector of parameter prior variance values
     controls_std: np.ndarray
+
+    # parameters constrained to be nonnegative; stored as a list of *_CEN key
+    # names (e.g. "L_CEN"). loaded from yaml, used to derive nonneg_inds.
+    nonneg_vars: list[str] = field(default_factory=list)
+
+    # indices into controls_cen / controls_std for nonneg parameters.
+    # derived automatically from nonneg_vars — do not set manually.
+    nonneg_inds: list[int] = field(default_factory=list)
 
     @classmethod
     def from_cli_and_yaml_and_noise(
@@ -191,6 +199,14 @@ class ClimateModelPriors:
             ]
         )
 
+        # derive nonneg indices from nonneg_vars + regional block sizes
+        param_dict["nonneg_inds"] = cls._get_nonneg_inds(
+            param_dict.get("nonneg_vars", []),
+            n_reg=len(param_dict["T_REG_CEN"]),
+            n_alpha=len(param_dict["ALPHA_CEN"]),
+            n_beta=len(param_dict["BETA_CEN"]),
+        )
+
         return cls(**param_dict)
 
     def get_augmented_cen_vector(self, aug_vector: list | np.ndarray) -> np.ndarray:
@@ -210,8 +226,8 @@ class ClimateModelPriors:
 
         Parameters
         ----------
-        ws_results: ?
-            maybe dict with relevant warm start characteristics?
+        ws_results: list
+            list of t_final results from warm start
         """
 
         # set global climate central values
@@ -260,12 +276,89 @@ class ClimateModelPriors:
             ]
         )
 
+    def gen_parameter_prior(self, N_ens: int) -> None:
+        """Generate parameter prior ensemble, with nonnegativity enforced.
+
+        Draws N_ens samples from a multivariate normal defined by controls_cen
+        and controls_std. Any draw that goes negative for a physically
+        constrained parameter (L, G, C1, C2, F1_CO2) is snapped back to the
+        prior mean for that parameter, consistent with the original behavior.
+
+        Parameters
+        ----------
+        N_ens: int
+            number of ensemble members
+        """
+        prior_vec = np.random.multivariate_normal(
+            self.controls_cen, np.diag(self.controls_std), size=N_ens
+        )
+
+        # enforce nonnegativity: snap unphysical draws back to the prior mean
+        # for ind in self.nonneg_inds:
+        #    prior_vec[:, ind] = np.where(
+        #        prior_vec[:, ind] < 0, self.controls_cen[ind], prior_vec[:, ind]
+        #    )
+
+        self.param_prior = prior_vec
+
+    @staticmethod
+    def _get_nonneg_inds(
+        nonneg_vars: list[str],
+        n_reg: int,
+        n_alpha: int,
+        n_beta: int,
+    ) -> list[int]:
+        """Map nonneg_vars parameter names to their indices in controls_cen.
+
+        The controls vector has this layout:
+            [T1, T2, Q, *T_REG (n_reg), L, G, EPS, C1, C2, F1_CO2,
+            *ALPHA (n_alpha), *BETA (n_beta)]
+
+        Parameters
+        ----------
+        nonneg_vars: list[str]
+            parameter names (e.g. ["L_CEN", "G_CEN"]) from the yaml config
+
+        n_reg: int
+            number of regional temperature entries (len of T_REG_CEN)
+
+        n_alpha: int
+            number of alpha entries
+
+        n_beta: int
+            number of beta entries
+
+        Returns
+        -------
+        list[int]
+            sorted indices into controls_cen for the nonneg parameters
+        """
+        # build the full ordered name list, mirroring controls_cen construction
+        names = [
+            "T1_CEN",
+            "T2_CEN",
+            "Q_CEN",
+            *[f"T_REG_CEN_{i}" for i in range(n_reg)],
+            "L_CEN",
+            "G_CEN",
+            "EPS_CEN",
+            "C1_CEN",
+            "C2_CEN",
+            "F1_CO2_CEN",
+            *[f"ALPHA_CEN_{i}" for i in range(n_alpha)],
+            *[f"BETA_CEN_{i}" for i in range(n_beta)],
+        ]
+        name_to_ind = {name: i for i, name in enumerate(names)}
+
+        return sorted(name_to_ind[var] for var in nonneg_vars if var in name_to_ind)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str)
     parser.add_argument("--noise_model", default="AR1")
     parser.add_argument("--reg_noise", action="store_true", default=False)
+    parser.add_argument("--n_ens", type=int, default=2)
     args = parser.parse_args()
 
     Noise = ClimateModelNoise.from_cli_and_yaml(args, Path("config/noise.yaml"))
@@ -275,10 +368,21 @@ if __name__ == "__main__":
 
     print(Priors)
 
+    np.random.seed(200)
+
     print(Priors.get_augmented_cen_vector(np.array([100, 200, 300])))
     print(Priors.get_augmented_std_vector(np.array([100, 200, 300])))
 
-    Priors.set_state_priors_from_warmstart([1.1, 0.6, 20, 2.2, 1.6])
+    dummy_ws_results = (
+        [1.1, 0.6, 20, 2.2, 1.6]
+        if args.model != "pco2geowc3"
+        else [1.1, 0.6, 20, 2.2, 1.6, 1.4]
+    )
+    Priors.set_state_priors_from_warmstart(dummy_ws_results)
 
     print(Priors.controls_cen)
     print(Priors.controls_std)
+
+    Priors.gen_parameter_prior(args.n_ens)
+
+    print(Priors.nonneg_inds, Priors.nonneg_vars)

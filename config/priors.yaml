@@ -36,6 +36,16 @@ global:
     - [C1_CEN, C1_STD]
     - [C2_CEN, C2_STD]
 
+  # parameters constrained to be nonnegative (physical requirement)
+  # these are the *_CEN key names; constraint applies to the parameter itself
+  nonneg_vars:
+    - L_CEN  # climate feedback parameter is never negative
+    - G_CEN  # ocean heat exchange
+    - EPS_CEN  # pattern effect parameter
+    - C1_CEN  # heat capacity of surface layer
+    - C2_CEN  # heat capacity of deep ocean
+    - F1_CO2_CEN  # forcing sensitivity to CO2 concentrations
+
   # add warm start dummy vars (will be overridden by warm start module)
   T1_CEN: 0.0
   T1_STD: None  # same size as internal variability, set on init of dc
