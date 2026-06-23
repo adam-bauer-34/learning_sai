@@ -25,9 +25,8 @@ from var_assim.emis import EmissionsBaseline
 from var_assim.model_errors import gen_noise_ts
 from var_assim.tlm_adj_checks import run_component_checks
 from var_assim.stats.covar import get_covar_white
-from var_assim.stats.draws import get_prior_draws
 from var_assim.postprocessing import process_simulation_window, make_master_datatree
-from var_assim.config import opt_config, DATA_DIR, PERF_REPS_PATH
+from var_assim.config import opt_config, DATA_DIR, PERF_REPS_PATH, SEED
 
 from var_assim.models.pco2geowc_nn.dynamics import get_nonlin_path
 from var_assim.models.pco2geowc_nn.obs import get_obs_from_dynamics
@@ -57,6 +56,9 @@ def run_var_assim_experiment(
     warm_start_simulation(logger, args, Truth, Prior, get_nonlin_path)
     logger.info("    > Warm start complete")
 
+    # generate parameter prior based on warm start results
+    Prior.gen_parameter_prior(args.n_ens)
+
     """ASSIMILATION MODULE
     """
     # dictionary to make datatree out of later
@@ -66,7 +68,7 @@ def run_var_assim_experiment(
         logger.info(f"    > Carrying out data assimilation for window {TMIN}-{TMAX}")
 
         # set seed so we get same draws for each assimilation window
-        np.random.seed(1000)
+        np.random.seed(SEED)
 
         # make emissions baseline
         e = EmissionsBaseline(
@@ -82,7 +84,11 @@ def run_var_assim_experiment(
             print_level=2,
         )
 
+        # Check on object sizes and controls vectors
         if args.debug:
+            logger.info(
+                f"        >> (DEBUG) Emissions object is of size: {sys.getsizeof(e) / 1e6} MB"
+            )
             logger.info(f"        >> (DEBUG) Controls vector: {Truth.controls_tr}")
             logger.info(
                 f"        >> (DEBUG) Controls vector length: {len(Truth.controls_tr)}"
@@ -179,17 +185,6 @@ def run_var_assim_experiment(
         tol = opt_config["tol"]
         max_iter = opt_config["max_iter"]
 
-        # give first guess at initial conditions
-        theta_prior = get_prior_draws(
-            args.model, Prior.controls_cen, np.linalg.inv(inv_covar_prior), args.n_ens
-        )
-
-        # Check on object sizes
-        if args.debug:
-            logger.info(
-                f"        >> (DEBUG) Emissions object is of size: {sys.getsizeof(e) / 1e6} MB"
-            )
-
         # scatter emissions baseline class and true observations to each
         # dask worker
         e_scat = c.scatter(e, broadcast=True)
@@ -213,7 +208,7 @@ def run_var_assim_experiment(
                 obs,
                 times,
             )
-            for theta_p in theta_prior
+            for theta_p in Prior.param_prior
         ]
 
         if args.debug:

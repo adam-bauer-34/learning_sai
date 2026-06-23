@@ -28,6 +28,8 @@ WINDOW_PATH = CONFIG_PATH.parent.parent / Path(CONFIG["WINDOW_PATH"])
 
 OPT_CHAR_PATH = Path(__file__).parent.parent.parent / "config" / "optimization.yaml"
 
+SEED = 43  # set random seed
+
 with open(OPT_CHAR_PATH, "r") as f:
     opt_config = yaml.safe_load(f)
 

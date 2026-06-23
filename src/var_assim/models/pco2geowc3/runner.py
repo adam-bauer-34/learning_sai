@@ -25,9 +25,8 @@ from var_assim.emis import EmissionsBaseline
 from var_assim.model_errors import gen_noise_ts
 from var_assim.tlm_adj_checks import run_component_checks
 from var_assim.stats.covar import get_covar_white
-from var_assim.stats.draws import get_prior_draws
 from var_assim.postprocessing import process_simulation_window, make_master_datatree
-from var_assim.config import opt_config, DATA_DIR, PERF_REPS_PATH
+from var_assim.config import opt_config, DATA_DIR, PERF_REPS_PATH, SEED
 
 from var_assim.models.pco2geowc3.dynamics import get_nonlin_path
 from var_assim.models.pco2geowc3.obs import get_obs_from_dynamics
@@ -57,6 +56,9 @@ def run_var_assim_experiment(
     warm_start_simulation(logger, args, Truth, Prior, get_nonlin_path)
     logger.info("    > Warm start complete")
 
+    # generate parameter prior based on warm start results
+    Prior.gen_parameter_prior(args.n_ens)
+
     """ASSIMILATION MODULE
     """
     # dictionary to make datatree out of later
@@ -66,7 +68,7 @@ def run_var_assim_experiment(
         logger.info(f"    > Carrying out data assimilation for window {TMIN}-{TMAX}")
 
         # set seed so we get same draws for each assimilation window
-        np.random.seed(1000)
+        np.random.seed(SEED)
 
         # make emissions baseline
         e = EmissionsBaseline(
@@ -82,6 +84,33 @@ def run_var_assim_experiment(
             print_level=2,
         )
 
+        # Check on object sizes
+        if args.debug:
+            logger.info(
+                f"        >> (DEBUG) Emissions object is of size: {sys.getsizeof(e) / 1e6} MB"
+            )
+
+        # make model errors and their covariance matrix
+        mod_errors, mod_error_covar = gen_noise_ts(Noise, len(e.conc["CO2"]))
+
+        # make (N_ens, len(mod_errors)) sized array of zeros that serve as the prior on model errors
+        mod_errors_prior = np.zeros((args.n_ens, len(mod_errors)))
+
+        # get augmented parameter prior from Priors object
+        theta_prior = Prior.get_augmented_parameter_prior(mod_errors_prior)
+
+        # make dummy prior stds vector
+        prior_stds = Prior.get_augmented_std_vector(np.ones(len(mod_errors)))
+
+        # make inverse covariance matrices for white noise
+        inv_covar_prior = get_covar_white(prior_stds, len(prior_stds), inv=True)
+
+        # add in inverse covarianace matrix of model errors (which may not be
+        # white, like the other parameters)
+        inv_covar_prior[-len(mod_errors) :, -len(mod_errors) :] = np.linalg.inv(
+            mod_error_covar
+        )
+
         # make model errors and their covariance matrix
         mod_errors, mod_error_covar = gen_noise_ts(Noise, len(e.conc["CO2"]))
 
@@ -94,23 +123,8 @@ def run_var_assim_experiment(
                 f"        >> (DEBUG) Controls vector length: {len(controls_tr)}"
             )
 
-        # central value of priors on each parameter
-        controls_cen = Prior.get_augmented_cen_vector(np.zeros_like(mod_errors))
-
         # make true data path over this time window
         data_tr_p, times = get_nonlin_path(e, controls_tr, TMIN, TMAX, DT=1.0)
-
-        # make prior stds vector
-        prior_stds = Prior.get_augmented_std_vector(np.ones(len(mod_errors)))
-
-        # make inverse covariance matrices for white noise
-        inv_covar_prior = get_covar_white(prior_stds, len(prior_stds), inv=True)
-
-        # add in inverse covarianace matrix of model errors (which may not be
-        # white, like the other parameters)
-        inv_covar_prior[-len(mod_errors) :, -len(mod_errors) :] = np.linalg.inv(
-            mod_error_covar
-        )
 
         # make observation error covariance matrices
         # global temp
@@ -191,17 +205,6 @@ def run_var_assim_experiment(
         # optimization parameters
         tol = opt_config["tol"]
         max_iter = opt_config["max_iter"]
-
-        # give first guess at initial conditions
-        theta_prior = get_prior_draws(
-            args.model, controls_cen, np.linalg.inv(inv_covar_prior), args.n_ens
-        )
-
-        # Check on object sizes
-        if args.debug:
-            logger.info(
-                f"        >> (DEBUG) Emissions object is of size: {sys.getsizeof(e) / 1e6} MB"
-            )
 
         # scatter emissions baseline class and true observations to each
         # dask worker

@@ -26,7 +26,7 @@ from var_assim.model_errors import gen_noise_ts
 from var_assim.tlm_adj_checks import run_component_checks
 from var_assim.stats.covar import get_covar_white
 from var_assim.postprocessing import process_simulation_window, make_master_datatree
-from var_assim.config import opt_config, DATA_DIR, PERF_REPS_PATH
+from var_assim.config import opt_config, DATA_DIR, PERF_REPS_PATH, SEED
 
 from var_assim.models.pco2geowc.dynamics import get_nonlin_path
 from var_assim.models.pco2geowc.obs import get_obs_from_dynamics
@@ -68,7 +68,7 @@ def run_var_assim_experiment(
         logger.info(f"    > Carrying out data assimilation for window {TMIN}-{TMAX}")
 
         # set seed so we get same draws for each assimilation window
-        np.random.seed(43)
+        np.random.seed(SEED)
 
         # make emissions baseline
         e = EmissionsBaseline(
@@ -98,9 +98,6 @@ def run_var_assim_experiment(
 
         # get augmented parameter prior from Priors object
         theta_prior = Prior.get_augmented_parameter_prior(mod_errors_prior)
-
-        # central value of priors on each parameter
-        # controls_cen = Prior.get_augmented_cen_vector(np.zeros_like(mod_errors))
 
         # make dummy prior stds vector
         prior_stds = Prior.get_augmented_std_vector(np.ones(len(mod_errors)))
