@@ -25,7 +25,6 @@ from var_assim.emis import EmissionsBaseline
 from var_assim.model_errors import gen_noise_ts
 from var_assim.tlm_adj_checks import run_component_checks
 from var_assim.stats.covar import get_covar_white
-from var_assim.stats.draws import get_prior_draws
 from var_assim.postprocessing import process_simulation_window, make_master_datatree
 from var_assim.config import opt_config, DATA_DIR, PERF_REPS_PATH
 
@@ -85,25 +84,25 @@ def run_var_assim_experiment(
             print_level=2,
         )
 
+        # Check on object sizes
+        if args.debug:
+            logger.info(
+                f"        >> (DEBUG) Emissions object is of size: {sys.getsizeof(e) / 1e6} MB"
+            )
+
         # make model errors and their covariance matrix
         mod_errors, mod_error_covar = gen_noise_ts(Noise, len(e.conc["CO2"]))
 
-        # true vector of controls for this window
-        controls_tr = Truth.get_augmented_truth_vector(mod_errors)
+        # make (N_ens, len(mod_errors)) sized array of zeros that serve as the prior on model errors
+        mod_errors_prior = np.zeros((args.n_ens, len(mod_errors)))
 
-        if args.debug:
-            logger.info(f"        >> (DEBUG) Controls vector: {controls_tr}")
-            logger.info(
-                f"        >> (DEBUG) Controls vector length: {len(controls_tr)}"
-            )
+        # get augmented parameter prior from Priors object
+        theta_prior = Prior.get_augmented_parameter_prior(mod_errors_prior)
 
         # central value of priors on each parameter
-        controls_cen = Prior.get_augmented_cen_vector(np.zeros_like(mod_errors))
+        # controls_cen = Prior.get_augmented_cen_vector(np.zeros_like(mod_errors))
 
-        # make true data path over this time window
-        data_tr_p, times = get_nonlin_path(e, controls_tr, TMIN, TMAX, DT=1.0)
-
-        # make prior stds vector
+        # make dummy prior stds vector
         prior_stds = Prior.get_augmented_std_vector(np.ones(len(mod_errors)))
 
         # make inverse covariance matrices for white noise
@@ -114,6 +113,18 @@ def run_var_assim_experiment(
         inv_covar_prior[-len(mod_errors) :, -len(mod_errors) :] = np.linalg.inv(
             mod_error_covar
         )
+
+        # update true vector of controls for this window
+        controls_tr = Truth.get_augmented_truth_vector(mod_errors)
+
+        if args.debug:
+            logger.info(f"        >> (DEBUG) Controls vector: {controls_tr}")
+            logger.info(
+                f"        >> (DEBUG) Controls vector length: {len(controls_tr)}"
+            )
+
+        # make true data path over this time window
+        data_tr_p, times = get_nonlin_path(e, controls_tr, TMIN, TMAX, DT=1.0)
 
         # make observation error covariance matrices
         # global temp
@@ -192,17 +203,6 @@ def run_var_assim_experiment(
         # optimization parameters
         tol = opt_config["tol"]
         max_iter = opt_config["max_iter"]
-
-        # give first guess at initial conditions
-        theta_prior = get_prior_draws(
-            args.model, controls_cen, np.linalg.inv(inv_covar_prior), args.n_ens
-        )
-
-        # Check on object sizes
-        if args.debug:
-            logger.info(
-                f"        >> (DEBUG) Emissions object is of size: {sys.getsizeof(e) / 1e6} MB"
-            )
 
         # scatter emissions baseline class and true observations to each
         # dask worker

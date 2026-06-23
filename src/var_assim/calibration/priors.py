@@ -301,6 +301,24 @@ class ClimateModelPriors:
 
         self.param_prior = prior_vec
 
+    def get_augmented_parameter_prior(self, aug_dist: np.ndarray) -> np.ndarray:
+        """Augment the parameter prior ensemble with additional columns.
+
+        This is usually used to make the prior for the simulation where aug_dist
+        is the prior for model errors
+ 
+        Parameters
+        ----------
+        aug_dist: np.ndarray, shape (N_ens, x)
+            array to append to the parameter prior column-wise
+ 
+        Returns
+        -------
+        np.ndarray, shape (N_ens, len(controls_cen) + X)
+            horizontal concatenation of param_prior and x
+        """
+        return np.hstack([self.param_prior, aug_dist])
+
     @staticmethod
     def _get_nonneg_inds(
         nonneg_vars: list[str],
@@ -351,6 +369,8 @@ class ClimateModelPriors:
         name_to_ind = {name: i for i, name in enumerate(names)}
 
         return sorted(name_to_ind[var] for var in nonneg_vars if var in name_to_ind)
+    
+    def get_augmented_prior(self, aug_vec)
 
 
 if __name__ == "__main__":
