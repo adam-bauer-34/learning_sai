@@ -195,6 +195,16 @@ def run_var_assim_experiment(
             args.model, controls_cen, np.linalg.inv(inv_covar_prior), args.n_ens
         )
 
+        logger.debug(
+            f"    ! mean of parameter prior: {np.mean(theta_prior[:, 15], axis=0)}"
+        )
+        logger.debug(
+            f"    ! median of parameter prior: {np.median(theta_prior[:, 15], axis=0)}"
+        )
+        logger.debug(
+            f"    ! std of parameter prior: {np.std(theta_prior[:, 15], axis=0)}"
+        )
+
         # Check on object sizes
         if args.debug:
             logger.info(
