@@ -28,6 +28,10 @@ WINDOW_PATH = CONFIG_PATH.parent.parent / Path(CONFIG["WINDOW_PATH"])
 
 OPT_CHAR_PATH = Path(__file__).parent.parent.parent / "config" / "optimization.yaml"
 
+PRIOR_SEED = 7
+MOD_ERROR_SEED = 11
+REG_NOISE_SEED = 1998
+
 with open(OPT_CHAR_PATH, "r") as f:
     opt_config = yaml.safe_load(f)
 

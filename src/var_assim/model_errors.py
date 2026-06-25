@@ -10,7 +10,7 @@ import numpy as np
 from var_assim.stats.covar import get_covar_white, get_covar_ar1
 
 
-def gen_noise_ts(Noise, N_times):
+def gen_noise_ts(Noise, N_times, rng=None):
     """Generate a time series of model errors to force the model.
 
     Parameters
@@ -30,6 +30,9 @@ def gen_noise_ts(Noise, N_times):
         model error covariance matrix
     """
 
+    if rng is None:
+        rng = np.random.default_rng()
+
     if Noise.NOISE_MODEL == "AR0":
         model_error_covar = get_covar_white(
             np.array([Noise.INT_VAR_STD] * N_times), N_times
@@ -43,8 +46,6 @@ def gen_noise_ts(Noise, N_times):
             "Invalid noise model. Only AR(0) and AR(1) are currently implemented."
         )
 
-    model_errors = np.random.multivariate_normal(
-        np.array([0.0] * N_times), model_error_covar
-    )
+    model_errors = rng.multivariate_normal(np.array([0.0] * N_times), model_error_covar)
 
     return model_errors, model_error_covar
