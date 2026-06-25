@@ -111,7 +111,7 @@ var-assim \
     \
     --n_ens        "$N_ENS"       \
     --save_output                 \
-    --debug
+    --reg_noise
 
 EXIT_CODE=$?
 
