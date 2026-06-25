@@ -27,7 +27,13 @@ from var_assim.tlm_adj_checks import run_component_checks
 from var_assim.stats.covar import get_covar_white
 from var_assim.stats.draws import get_prior_draws
 from var_assim.postprocessing import process_simulation_window, make_master_datatree
-from var_assim.config import opt_config, DATA_DIR, PERF_REPS_PATH
+from var_assim.config import (
+    opt_config,
+    DATA_DIR,
+    PERF_REPS_PATH,
+    PRIOR_SEED,
+    MOD_ERROR_SEED,
+)
 
 from var_assim.models.pco2geowc.dynamics import get_nonlin_path
 from var_assim.models.pco2geowc.obs import get_obs_from_dynamics
@@ -65,9 +71,6 @@ def run_var_assim_experiment(
     for TMIN, TMAX in Windowing.windows:
         logger.info(f"    > Carrying out data assimilation for window {TMIN}-{TMAX}")
 
-        # set seed so we get same draws for each assimilation window
-        np.random.seed(43)
-
         # make emissions baseline
         e = EmissionsBaseline(
             logger,
@@ -83,7 +86,10 @@ def run_var_assim_experiment(
         )
 
         # make model errors and their covariance matrix
-        mod_errors, mod_error_covar = gen_noise_ts(Noise, len(e.conc["CO2"]))
+        mod_errors_rng = np.random.default_rng(seed=MOD_ERROR_SEED)
+        mod_errors, mod_error_covar = gen_noise_ts(
+            Noise, len(e.conc["CO2"]), rng=mod_errors_rng
+        )
 
         # true vector of controls for this window
         controls_tr = Truth.get_augmented_truth_vector(mod_errors)
@@ -191,8 +197,13 @@ def run_var_assim_experiment(
         max_iter = opt_config["max_iter"]
 
         # give first guess at initial conditions
+        prior_rng = np.random.default_rng(seed=PRIOR_SEED)
         theta_prior = get_prior_draws(
-            args.model, controls_cen, np.linalg.inv(inv_covar_prior), args.n_ens
+            args.model,
+            controls_cen,
+            np.linalg.inv(inv_covar_prior),
+            args.n_ens,
+            rng=prior_rng,
         )
 
         logger.debug(

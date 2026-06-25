@@ -1,12 +1,12 @@
-"""Observation operator related functions.
-"""
+"""Observation operator related functions."""
 
 import numpy as np
 
+from var_assim.config import REG_NOISE_SEED
+
 
 def get_obs_from_dynamics(paths, noise=False, noise_params=None):
-    """Observation operator.
-    """
+    """Observation operator."""
 
     # cast paths into observed quantities
     T1 = paths[0]
@@ -18,11 +18,10 @@ def get_obs_from_dynamics(paths, noise=False, noise_params=None):
 
     if noise:
         # apply noise to observations
+        rng = np.random.default_rng(seed=REG_NOISE_SEED)
         means, covs = noise_params
-        T1_noise = np.random.multivariate_normal([means[0]] * len(T1),
-                                                 covs[0])
-        Q_noise = np.random.multivariate_normal([means[1]] * len(Q),
-                                                covs[1])
+        T1_noise = rng.multivariate_normal([means[0]] * len(T1), covs[0])
+        Q_noise = rng.multivariate_normal([means[1]] * len(Q), covs[1])
 
         obs[0] += T1_noise
         obs[1] += Q_noise

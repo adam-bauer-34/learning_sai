@@ -110,7 +110,8 @@ var-assim \
     --n_yrs_ramp   "$N_YRS_RAMP"  \
     \
     --n_ens        "$N_ENS"       \
-    --save_output
+    --save_output                 \
+    --debug
 
 EXIT_CODE=$?
 
