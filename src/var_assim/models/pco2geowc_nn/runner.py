@@ -27,7 +27,7 @@ from var_assim.tlm_adj_checks import run_component_checks
 from var_assim.stats.covar import get_covar_white
 from var_assim.stats.draws import get_prior_draws
 from var_assim.postprocessing import process_simulation_window, make_master_datatree
-from var_assim.config import opt_config, DATA_DIR, PERF_REPS_PATH
+from var_assim.config import opt_config, DATA_DIR, PERF_REPS_PATH, PRIOR_SEED
 
 from var_assim.models.pco2geowc_nn.dynamics import get_nonlin_path
 from var_assim.models.pco2geowc_nn.obs import get_obs_from_dynamics
@@ -64,9 +64,6 @@ def run_var_assim_experiment(
 
     for TMIN, TMAX in Windowing.windows:
         logger.info(f"    > Carrying out data assimilation for window {TMIN}-{TMAX}")
-
-        # set seed so we get same draws for each assimilation window
-        np.random.seed(1000)
 
         # make emissions baseline
         e = EmissionsBaseline(
@@ -180,8 +177,13 @@ def run_var_assim_experiment(
         max_iter = opt_config["max_iter"]
 
         # give first guess at initial conditions
+        prior_rng = np.random.default_rng(seed=PRIOR_SEED)
         theta_prior = get_prior_draws(
-            args.model, Prior.controls_cen, np.linalg.inv(inv_covar_prior), args.n_ens
+            args.model,
+            Prior.controls_cen,
+            np.linalg.inv(inv_covar_prior),
+            args.n_ens,
+            rng=prior_rng,
         )
 
         # Check on object sizes
@@ -226,10 +228,10 @@ def run_var_assim_experiment(
                 else:
                     total += sys.getsizeof(v)
 
-            logger.info(
+            logger.debug(
                 f"        >> (DEBUG) Estimated total of on ensemble member: {total / 1e6} MB"
             )
-            logger.info(
+            logger.debug(
                 f"        >> (DEBUG) Memory overhead for entire ensemble: {total * args.n_ens / 1e6} MB"
             )
 

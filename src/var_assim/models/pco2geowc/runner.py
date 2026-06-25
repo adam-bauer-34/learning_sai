@@ -258,10 +258,10 @@ def run_var_assim_experiment(
                 else:
                     total += sys.getsizeof(v)
 
-            logger.info(
+            logger.debug(
                 f"        >> (DEBUG) Estimated total of on ensemble member: {total / 1e6} MB"
             )
-            logger.info(
+            logger.debug(
                 f"        >> (DEBUG) Memory overhead for entire ensemble: {total * args.n_ens / 1e6} MB"
             )
 
