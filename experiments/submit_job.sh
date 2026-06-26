@@ -1,7 +1,5 @@
 #!/bin/bash
 # submit.sh — wrapper around script.sbatch
-# Usage: ./submit.sh [--scenario ssp585] [--model pco2geowc] [--noise_model AR1] ...
-# Any args not provided fall back to the defaults from script.sbatch.
 
 # --------------------------------
 # Defaults (must match script.sbatch)
@@ -15,6 +13,7 @@ ECS=3.0
 DEG_P_DEC=0.1
 N_YRS_RAMP=50
 N_ENS=500
+REG_NOISE=false
 
 # --------------------------------
 # Parse arguments
@@ -30,9 +29,16 @@ while [[ $# -gt 0 ]]; do
         --deg_p_dec)    DEG_P_DEC="$2";    shift 2 ;;
         --n_yrs_ramp)   N_YRS_RAMP="$2";   shift 2 ;;
         --n_ens)        N_ENS="$2";        shift 2 ;;
+        --reg_noise)    REG_NOISE=true;    shift ;;
         *) echo "Unknown argument: $1" >&2; exit 1 ;;
     esac
 done
+
+# --------------------------------
+# Build optional flags string
+# --------------------------------
+OPTIONAL_FLAGS=""                                         
+[[ "$REG_NOISE" == true ]] && OPTIONAL_FLAGS="--reg_noise"
 
 # --------------------------------
 # Build job name from all params
@@ -58,4 +64,5 @@ sbatch \
         --ecs          "$ECS"         \
         --deg_p_dec    "$DEG_P_DEC"   \
         --n_yrs_ramp   "$N_YRS_RAMP"  \
-        --n_ens        "$N_ENS"
+        --n_ens        "$N_ENS"       \
+        $OPTIONAL_FLAGS               

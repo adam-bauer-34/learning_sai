@@ -7,14 +7,14 @@
 #SBATCH --account=pi-bbcael
 #SBATCH --partition=caslake
 
-#SBATCH --time=1:00:00
+#SBATCH --time=2:00:00
 
 # --- ARRAY CONFIGURATION ---
 #SBATCH --array=0-5
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=60G
+#SBATCH --mem=80G
 # ---------------------------
 
 #SBATCH --mail-user=ambauer@rcc.uchicago.edu
@@ -26,7 +26,6 @@ mkdir -p logs
 # --------------------------------
 # Argument parsing (with defaults)
 # --------------------------------
-
 MODEL="pco2geowc"
 SCENARIO="ssp245"
 NOISE_MODEL="AR1"
@@ -36,6 +35,7 @@ ECS=3.0
 DEG_P_DEC=0.1
 N_YRS_RAMP=50
 N_ENS=500
+REG_NOISE=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -48,6 +48,7 @@ while [[ $# -gt 0 ]]; do
         --deg_p_dec)    DEG_P_DEC="$2";    shift 2 ;;
         --n_yrs_ramp)   N_YRS_RAMP="$2";   shift 2 ;;
         --n_ens)        N_ENS="$2";        shift 2 ;;
+        --reg_noise)    REG_NOISE=true;    shift ;;
         *) echo "Unknown argument: $1" >&2; exit 1 ;;
     esac
 done
@@ -79,6 +80,7 @@ echo " ecs             : $ECS"
 echo " deg_p_dec       : $DEG_P_DEC"
 echo " n_yrs_ramp      : $N_YRS_RAMP"
 echo " n_ens           : $N_ENS"
+echo " reg_noise       : $REG_NOISE"
 echo "======================================"
 echo ""
 
@@ -94,7 +96,10 @@ export NUMEXPR_NUM_THREADS=1
 
 echo "Starting Array Task $SLURM_ARRAY_TASK_ID with Param $CURRENT_PARAM"
 
-# 3. Run the python command
+# Build optional flags, then pass to var-assim
+OPTIONAL_FLAGS=""                                            
+[[ "$REG_NOISE" == true ]] && OPTIONAL_FLAGS="--reg_noise" 
+
 var-assim \
     --model        "$MODEL"       \
     --scenario     "$SCENARIO"    \
@@ -111,7 +116,7 @@ var-assim \
     \
     --n_ens        "$N_ENS"       \
     --save_output                 \
-    --reg_noise
+    $OPTIONAL_FLAGS               
 
 EXIT_CODE=$?
 

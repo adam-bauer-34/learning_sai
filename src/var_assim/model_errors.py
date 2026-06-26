@@ -10,7 +10,7 @@ import numpy as np
 from var_assim.stats.covar import get_covar_white, get_covar_ar1
 
 
-def gen_noise_ts(Noise, N_times, rng=None):
+def gen_noise_ts(Noise, N_times, rng=None, reg=False):
     """Generate a time series of model errors to force the model.
 
     Parameters
@@ -20,6 +20,12 @@ def gen_noise_ts(Noise, N_times, rng=None):
 
     N_times: int
         number of time steps we have; tells code how long of a vector to return
+
+    rng: np.random.default_rng object
+        the rng to use in making the draws
+
+    reg: bool
+        if these are regional model errors, use AR(0) process
 
     Returns
     -------

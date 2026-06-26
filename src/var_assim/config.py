@@ -30,7 +30,10 @@ OPT_CHAR_PATH = Path(__file__).parent.parent.parent / "config" / "optimization.y
 
 PRIOR_SEED = 7
 MOD_ERROR_SEED = 11
-REG_NOISE_SEED = 1998
+REG_NOISE_SEED = 39  # will depreciate soon
+REG1_NOISE_SEED = 1998
+REG2_NOISE_SEED = 2
+REG3_NOISE_SEED = 34
 
 with open(OPT_CHAR_PATH, "r") as f:
     opt_config = yaml.safe_load(f)
@@ -49,7 +52,7 @@ def parse_args():
         type=str,
         default="pco2geowc",
         required=True,
-        choices=["pco2geowc", "pco2geowc3", "pco2geowc_nn"],
+        choices=["pco2geowc", "pco2geowc3", "pco2geowc_nn", "pco2geowc_reg"],
         help="The model equations to use",
     )
 
@@ -174,6 +177,9 @@ def check_config_compatability(args):
         raise ValueError(
             f"Windowing scheme {args.windowing} is designed for a warm start beginning in 2023. Please set --tmin to 2023."
         )
+
+    if args.model == "pco2geowc_reg" and not args.reg_noise:
+        raise ValueError(f"{args.model} cannot be run without --reg_noise flag")
 
 
 # quick test
