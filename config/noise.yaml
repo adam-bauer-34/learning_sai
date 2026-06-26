@@ -19,7 +19,9 @@ noise_model:
 
   Regional:
     two_region:
-      OBS_T_REG_STD: [0.35, 0.3]  # obs noise in region 1 and 2
+      OBS_T_REG_STD: [1.0, 1.0]  # obs noise in reg 1 and 2
+      INT_T_REG_STD: [0.35, 0.3]  # internal variability mag for reg 1 and 2
     
     three_region:
-      OBS_T_REG_STD: [0.35, 0.3, 0.25]  # obs noise in regions 1, 2, 3
+      OBS_T_REG_STD: [1.0, 1.0, 1.0]  # obs noise in regions 1, 2, 3
+      INT_T_REG_STD: [0.35, 0.3, 0.25]  # internal variability mag for reg 1 and 2
