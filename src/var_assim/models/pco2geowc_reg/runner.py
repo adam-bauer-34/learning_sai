@@ -37,9 +37,9 @@ from var_assim.config import (
     REG2_NOISE_SEED,
 )
 
-from var_assim.models.pco2geowc.dynamics import get_nonlin_path
-from var_assim.models.pco2geowc.obs import get_obs_from_dynamics
-from var_assim.models.pco2geowc.parallelization import EnsembleMember, runner_4dvar
+from var_assim.models.pco2geowc_reg.dynamics import get_nonlin_path
+from var_assim.models.pco2geowc_reg.obs import get_obs_from_dynamics
+from var_assim.models.pco2geowc_reg.parallelization import EnsembleMember, runner_4dvar
 
 SLURM_JOB_ID = os.environ.get("SLURM_JOB_ID", "local")
 

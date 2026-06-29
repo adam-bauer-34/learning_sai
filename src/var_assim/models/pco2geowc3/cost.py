@@ -15,7 +15,8 @@ from .obs import get_obs_from_dynamics
 
 # filter out RuntimeWarning because they clog the log files
 # and don't impact the results
-warnings.filterwarnings('ignore', category=RuntimeWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+
 
 def cost(control, args):
     """Cost function for 4DVAR.
@@ -48,9 +49,20 @@ def cost(control, args):
 
     # unpack lists
     control = np.array(control)
-    (x_f, inv_covar_prior,
-     inv_covar_T1, inv_covar_Q, inv_covar_T_R1, inv_covar_T_R2, inv_covar_T_R3,
-     obs, e, T_MIN, T_MAX, DT) = args
+    (
+        x_f,
+        inv_covar_prior,
+        inv_covar_T1,
+        inv_covar_Q,
+        inv_covar_T_R1,
+        inv_covar_T_R2,
+        inv_covar_T_R3,
+        obs,
+        e,
+        T_MIN,
+        T_MAX,
+        DT,
+    ) = args
 
     # unpack data
     T1_d, Q_d, T_R1_d, T_R2_d, T_R3_d = obs
@@ -65,11 +77,13 @@ def cost(control, args):
     T1_obs_p, Q_obs_p, T_R1_obs_p, T_R2_obs_p, T_R3_obs_p = get_obs_from_dynamics(paths)
 
     # data piece
-    data_piece = 0.5 * ((T1_obs_p - T1_d).T @ inv_covar_T1 @ (T1_obs_p - T1_d)
-                        + (Q_obs_p - Q_d).T @ inv_covar_Q @ (Q_obs_p - Q_d)
-                        + (T_R1_obs_p - T_R1_d).T @ inv_covar_T_R1 @ (T_R1_obs_p - T_R1_d)
-                        + (T_R2_obs_p - T_R2_d).T @ inv_covar_T_R2 @ (T_R2_obs_p - T_R2_d)
-                        + (T_R3_obs_p - T_R3_d).T @ inv_covar_T_R3 @ (T_R3_obs_p - T_R3_d))
+    data_piece = 0.5 * (
+        (T1_obs_p - T1_d).T @ inv_covar_T1 @ (T1_obs_p - T1_d)
+        + (Q_obs_p - Q_d).T @ inv_covar_Q @ (Q_obs_p - Q_d)
+        + (T_R1_obs_p - T_R1_d).T @ inv_covar_T_R1 @ (T_R1_obs_p - T_R1_d)
+        + (T_R2_obs_p - T_R2_d).T @ inv_covar_T_R2 @ (T_R2_obs_p - T_R2_d)
+        + (T_R3_obs_p - T_R3_d).T @ inv_covar_T_R3 @ (T_R3_obs_p - T_R3_d)
+    )
 
     cost = init_piece + data_piece
     return cost
@@ -78,9 +92,20 @@ def cost(control, args):
 def grad(control, args):
     # unpack lists
     control = np.array(control)
-    (x_f, inv_covar_prior,
-     inv_covar_T1, inv_covar_Q, inv_covar_T_R1, inv_covar_T_R2, inv_covar_T_R3,
-     obs, e, T_MIN, T_MAX, DT) = args
+    (
+        x_f,
+        inv_covar_prior,
+        inv_covar_T1,
+        inv_covar_Q,
+        inv_covar_T_R1,
+        inv_covar_T_R2,
+        inv_covar_T_R3,
+        obs,
+        e,
+        T_MIN,
+        T_MAX,
+        DT,
+    ) = args
 
     # initial piece that only relies on the priors
     init_piece = inv_covar_prior @ (control - x_f)
@@ -89,15 +114,23 @@ def grad(control, args):
     nl_path, _ = get_nonlin_path(e, control, T_MIN, T_MAX, DT)
 
     # get adjoint path based on control
-    adj_p = get_adj_path(e,
-                         theta=control,
-                         TMIN=T_MIN,
-                         TMAX=T_MAX,
-                         DT=DT,
-                         nl_path=nl_path,
-                         covars=[inv_covar_T1, inv_covar_Q, inv_covar_T_R1, inv_covar_T_R2, inv_covar_T_R3],
-                         obs=obs,
-                         id_check=False)
+    adj_p = get_adj_path(
+        e,
+        theta=control,
+        TMIN=T_MIN,
+        TMAX=T_MAX,
+        DT=DT,
+        nl_path=nl_path,
+        covars=[
+            inv_covar_T1,
+            inv_covar_Q,
+            inv_covar_T_R1,
+            inv_covar_T_R2,
+            inv_covar_T_R3,
+        ],
+        obs=obs,
+        id_check=False,
+    )
 
     # initial values of adjoint are desired gradients of the observations-bit
     # of the cost function

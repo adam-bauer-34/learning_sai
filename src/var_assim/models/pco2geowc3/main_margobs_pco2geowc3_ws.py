@@ -12,7 +12,7 @@ To run:
 import sys
 import os
 import time
-import warnings 
+import warnings
 
 import numpy as np
 import xarray as xr
@@ -31,23 +31,25 @@ from model import DATA_DIR
 
 # from pympler import asizeof  # optional, include if needed / debugging
 
+
 def start_dask():
     # Slurm sets the SLURM_CPUS_PER_TASK variable
     # We use this to tell Dask exactly how many workers to start
     cpus_available = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))
-    
+
     # Initialize a cluster that matches the Slurm allocation
     cluster = LocalCluster(
-        n_workers=cpus_available, 
-        threads_per_worker=1, # 1 thread per worker is best for heavy math
-        memory_limit='auto',
-        processes=True
+        n_workers=cpus_available,
+        threads_per_worker=1,  # 1 thread per worker is best for heavy math
+        memory_limit="auto",
+        processes=True,
     )
     client = Client(cluster)
-    
+
     print(f"Dask Client started with {cpus_available} workers.")
     print(f"Dashboard link: {client.dashboard_link}")
     return client
+
 
 if __name__ == "__main__":
     c = start_dask()
@@ -67,7 +69,9 @@ if __name__ == "__main__":
 
     # raise ECS warning
     if ECS_TR != 3.0:
-        print("WARNING: Chaning ECS changes the global climate feedback, \lambda, not forcing sensitivity to CO2 concentrations.")
+        print(
+            "WARNING: Chaning ECS changes the global climate feedback, \lambda, not forcing sensitivity to CO2 concentrations."
+        )
 
     # binary variables that are pre-set
     CHECK_TLM = False  # check the tangent linear model?
@@ -87,10 +91,12 @@ if __name__ == "__main__":
     # make set of assimilation windows
     if not MANUAL_WINDOWING:
         tmax_assims = np.linspace(TMIN, 2100, N_windows, dtype=int)[1:]
-    
+
     else:
         fine = np.arange(TMIN, 2050, 2)  # fine grained early on
-        tmax_assims = np.hstack([fine, [2075, 2100]])[1:]  # add two larger ones later, ignore TMIN
+        tmax_assims = np.hstack([fine, [2075, 2100]])[
+            1:
+        ]  # add two larger ones later, ignore TMIN
 
     # GLOBAL ENERGY BALANCE MODEL PARAMETERS
     # central values of priors on global parameters
@@ -115,38 +121,68 @@ if __name__ == "__main__":
 
     # REGIONAL PATTERN SCALING MODEL PARAMETERS
     # central value and standard deviations of regional variables
-    df = pd.read_csv(DATA_DIR + '/input/regional_calibration_parameters_r3.csv',
-                     delimiter=',', header=0, index_col='THETA')
-    
+    df = pd.read_csv(
+        DATA_DIR + "/input/regional_calibration_parameters_r3.csv",
+        delimiter=",",
+        header=0,
+        index_col="THETA",
+    )
+
     # global temperature related parameters
-    ALPHA_R1_CEN = df.ALPHA_R1_CEN[THETA]  # region 1 pattern scaling parameter (global T)
-    ALPHA_R2_CEN = df.ALPHA_R2_CEN[THETA]  # region 2 pattern scaling parameter (global T)
-    ALPHA_R3_CEN = df.ALPHA_R3_CEN[THETA]  # region 3 pattern scaling parameter (global T)
+    ALPHA_R1_CEN = df.ALPHA_R1_CEN[
+        THETA
+    ]  # region 1 pattern scaling parameter (global T)
+    ALPHA_R2_CEN = df.ALPHA_R2_CEN[
+        THETA
+    ]  # region 2 pattern scaling parameter (global T)
+    ALPHA_R3_CEN = df.ALPHA_R3_CEN[
+        THETA
+    ]  # region 3 pattern scaling parameter (global T)
     ALPHA_R1_STD = df.ALPHA_R1_STD[THETA]  # standard deviation of alpha 1 prior
     ALPHA_R2_STD = df.ALPHA_R2_STD[THETA]  # standard deviation of alpha 2 prior
     ALPHA_R3_STD = df.ALPHA_R3_STD[THETA]  # standard deviation of alpha 3 prior
 
     # geoengineering related parameters
-    BETA_R1_CEN = df.BETA_R1_CEN[THETA]  # region 1 pattern scaling parameter (geoengeineering)
-    BETA_R2_CEN = df.BETA_R2_CEN[THETA]  # region 2 pattern scaling parameter (geoengeineering)
-    BETA_R3_CEN = df.BETA_R3_CEN[THETA]  # region 3 pattern scaling parameter (geoengeineering)
-    BETA_R1_STD = df.BETA_R1_STD[THETA]  # region 1 pattern scaling parameter (geoengeineering)
-    BETA_R2_STD = df.BETA_R2_STD[THETA]  # region 2 pattern scaling parameter (geoengeineering)
-    BETA_R3_STD = df.BETA_R3_STD[THETA]  # region 3 pattern scaling parameter (geoengeineering)
+    BETA_R1_CEN = df.BETA_R1_CEN[
+        THETA
+    ]  # region 1 pattern scaling parameter (geoengeineering)
+    BETA_R2_CEN = df.BETA_R2_CEN[
+        THETA
+    ]  # region 2 pattern scaling parameter (geoengeineering)
+    BETA_R3_CEN = df.BETA_R3_CEN[
+        THETA
+    ]  # region 3 pattern scaling parameter (geoengeineering)
+    BETA_R1_STD = df.BETA_R1_STD[
+        THETA
+    ]  # region 1 pattern scaling parameter (geoengeineering)
+    BETA_R2_STD = df.BETA_R2_STD[
+        THETA
+    ]  # region 2 pattern scaling parameter (geoengeineering)
+    BETA_R3_STD = df.BETA_R3_STD[
+        THETA
+    ]  # region 3 pattern scaling parameter (geoengeineering)
 
     # true values used to make observations
     ALPHA_R1_TR = df.ALPHA_R1_TR[THETA]  # region 1 pattern scaling parameter (global T)
     ALPHA_R2_TR = df.ALPHA_R2_TR[THETA]  # region 2 pattern scaling parameter (global T)
     ALPHA_R3_TR = df.ALPHA_R3_TR[THETA]  # region 3 pattern scaling parameter (global T)
-    BETA_R1_TR = df.BETA_R1_TR[THETA]  # region 1 pattern scaling parameter (geoengeineering)
-    BETA_R2_TR = df.BETA_R2_TR[THETA]  # region 2 pattern scaling parameter (geoengeineering)
-    BETA_R3_TR = df.BETA_R3_TR[THETA]  # region 3 pattern scaling parameter (geoengeineering)
+    BETA_R1_TR = df.BETA_R1_TR[
+        THETA
+    ]  # region 1 pattern scaling parameter (geoengeineering)
+    BETA_R2_TR = df.BETA_R2_TR[
+        THETA
+    ]  # region 2 pattern scaling parameter (geoengeineering)
+    BETA_R3_TR = df.BETA_R3_TR[
+        THETA
+    ]  # region 3 pattern scaling parameter (geoengeineering)
 
     print(ALPHA_R3_CEN, ALPHA_R3_TR, BETA_R3_CEN, BETA_R3_TR, ALPHA_R3_STD, BETA_R3_STD)
 
     """WARM START MODULE.
     """
-    print("Warm starting model to get initial conditions for temperature, ocean heat content, and regional temperature...")
+    print(
+        "Warm starting model to get initial conditions for temperature, ocean heat content, and regional temperature..."
+    )
     # "warm start" model to get the central estimates of the initial conditions
     # for temperature in our start year
     e_ws = EmissionsBaseline(SCENARIO, 1850, TMIN)
@@ -156,17 +192,40 @@ if __name__ == "__main__":
     # global mean ocean temperature, ocean heat content, and two regional temperatures
     # that we use pattern scaling to find: Tri = alpha_ri * T1 - beta_ri * geo_level.
     # since geo_level = 0 in the warm start, these are all zero (since T1 = 0 at 1850).
-    theta_ws = np.hstack([np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                         L_TR, G_TR, EPS_TR, C1_TR, C2_TR, F1_CO2_TR,
-                         ALPHA_R1_TR, ALPHA_R2_TR, ALPHA_R3_TR, BETA_R1_TR, BETA_R2_TR, BETA_R3_TR]),
-                         np.zeros_like(e_ws.conc['CO2'])])
+    theta_ws = np.hstack(
+        [
+            np.array(
+                [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    L_TR,
+                    G_TR,
+                    EPS_TR,
+                    C1_TR,
+                    C2_TR,
+                    F1_CO2_TR,
+                    ALPHA_R1_TR,
+                    ALPHA_R2_TR,
+                    ALPHA_R3_TR,
+                    BETA_R1_TR,
+                    BETA_R2_TR,
+                    BETA_R3_TR,
+                ]
+            ),
+            np.zeros_like(e_ws.conc["CO2"]),
+        ]
+    )
 
     # make "warm start" to get true initial conditions
     data_ws, _ = get_nonlin_path(e_ws, theta_ws, 1850, TMIN, DT)
 
     # true initial conditions
-    T1_TR = data_ws[0, -1] # surface temperature at TMIN
-    T1_CEN = data_ws[0, -1] # central estimate is the truth
+    T1_TR = data_ws[0, -1]  # surface temperature at TMIN
+    T1_CEN = data_ws[0, -1]  # central estimate is the truth
 
     T2_TR = data_ws[1, -1]  # ocean layer temperature at TMIN
     T2_CEN = data_ws[1, -1]  # central estimate is the truth
@@ -182,7 +241,7 @@ if __name__ == "__main__":
 
     T_R3_TR = ALPHA_R3_TR * T1_TR  # temperature in region 3 true value
     T_R3_CEN = ALPHA_R3_CEN * T1_CEN  # central estimate, temperature in region 3
-    
+
     print("Warm start complete!")
 
     print("==================================================================")
@@ -194,11 +253,21 @@ if __name__ == "__main__":
     print("The initial time is: {}".format(TMIN))
     print("Temperature is forced with AR({}) noise.".format(AR_P))
     print("ECS = {}.".format(ECS_TR))
-    print("The angle is {} degrees between temperature and geoengineering.".format(THETA))
+    print(
+        "The angle is {} degrees between temperature and geoengineering.".format(THETA)
+    )
     if not MANUAL_WINDOWING:
-        print("There are {} (auto-generated) assimilation windows, starting in {} and ending in 2100 (this implies adding one window adds {} years of observations).".format(N_windows - 1, TMIN, (2100 - TMIN)/len(tmax_assims)))
+        print(
+            "There are {} (auto-generated) assimilation windows, starting in {} and ending in 2100 (this implies adding one window adds {} years of observations).".format(
+                N_windows - 1, TMIN, (2100 - TMIN) / len(tmax_assims)
+            )
+        )
     else:
-        print("There are {} assimilation windows that were manually specified, which are {}.".format(len(tmax_assims), tmax_assims))
+        print(
+            "There are {} assimilation windows that were manually specified, which are {}.".format(
+                len(tmax_assims), tmax_assims
+            )
+        )
     print("The 4DVAR ensemble has {} members.".format(N_ENS))
     print("==================================================================")
 
@@ -217,30 +286,83 @@ if __name__ == "__main__":
         np.random.seed(1000)
 
         # make emissions baseline
-        e = EmissionsBaseline(SCENARIO, TMIN, TMAX,
-                              geo=True, DEG_PER_DEC=DEG_PER_DEC,
-                              LAMBDA=L_CEN, GAMMA=G_CEN, EPSILON=EPS_CEN, F_EFF_GEO=F_EFF_GEO_TR,
-                              T_START=TMIN, T_END=TMIN + N_YEARS_RAMP)
+        e = EmissionsBaseline(
+            SCENARIO,
+            TMIN,
+            TMAX,
+            geo=True,
+            DEG_PER_DEC=DEG_PER_DEC,
+            LAMBDA=L_CEN,
+            GAMMA=G_CEN,
+            EPSILON=EPS_CEN,
+            F_EFF_GEO=F_EFF_GEO_TR,
+            T_START=TMIN,
+            T_END=TMIN + N_YEARS_RAMP,
+        )
 
         # make model errors and their covariance matrix
-        mod_errors, mod_error_covar = gen_noise_ts(AR_P, len(e.conc['CO2']),
-                                                   INT_VAR_STD,
-                                                   CORR_COEFFS=[0.2])
+        mod_errors, mod_error_covar = gen_noise_ts(
+            AR_P, len(e.conc["CO2"]), INT_VAR_STD, CORR_COEFFS=[0.2]
+        )
 
         # true vector of controls: initial conditions, parameters, and model
         # errors
-        theta_tr = np.hstack([np.array([T1_TR, T2_TR,
-                             Q_TR, T_R1_TR, T_R2_TR, T_R3_TR,
-                             L_TR, G_TR, EPS_TR, C1_TR, C2_TR, F1_CO2_TR,
-                             ALPHA_R1_TR, ALPHA_R2_TR, ALPHA_R3_TR, 
-                             BETA_R1_TR, BETA_R2_TR, BETA_R3_TR]), mod_errors])
-        
+        theta_tr = np.hstack(
+            [
+                np.array(
+                    [
+                        T1_TR,
+                        T2_TR,
+                        Q_TR,
+                        T_R1_TR,
+                        T_R2_TR,
+                        T_R3_TR,
+                        L_TR,
+                        G_TR,
+                        EPS_TR,
+                        C1_TR,
+                        C2_TR,
+                        F1_CO2_TR,
+                        ALPHA_R1_TR,
+                        ALPHA_R2_TR,
+                        ALPHA_R3_TR,
+                        BETA_R1_TR,
+                        BETA_R2_TR,
+                        BETA_R3_TR,
+                    ]
+                ),
+                mod_errors,
+            ]
+        )
+
         # central value of priors on each parameter
-        theta_prior_cent = np.hstack([np.array([T1_CEN, T2_CEN,
-                                     Q_CEN, T_R1_CEN, T_R2_CEN, T_R3_CEN,
-                                     L_CEN, G_CEN, EPS_CEN, C1_CEN, C2_CEN, F1_CO2_CEN,
-                                     ALPHA_R1_CEN, ALPHA_R2_CEN, ALPHA_R3_CEN, 
-                                     BETA_R1_CEN, BETA_R2_CEN, BETA_R3_CEN]), mod_errors])
+        theta_prior_cent = np.hstack(
+            [
+                np.array(
+                    [
+                        T1_CEN,
+                        T2_CEN,
+                        Q_CEN,
+                        T_R1_CEN,
+                        T_R2_CEN,
+                        T_R3_CEN,
+                        L_CEN,
+                        G_CEN,
+                        EPS_CEN,
+                        C1_CEN,
+                        C2_CEN,
+                        F1_CO2_CEN,
+                        ALPHA_R1_CEN,
+                        ALPHA_R2_CEN,
+                        ALPHA_R3_CEN,
+                        BETA_R1_CEN,
+                        BETA_R2_CEN,
+                        BETA_R3_CEN,
+                    ]
+                ),
+                mod_errors,
+            ]
+        )
 
         # make true data path over this time window
         data_tr_p, times = get_nonlin_path(e, theta_tr, TMIN, TMAX, DT)
@@ -254,53 +376,63 @@ if __name__ == "__main__":
 
         T_IC_STD = 0.2  # initial condition std for t1 and t2 (roughly the size of internal variability)
         EPS_STD = 0.128  # pattern effect standard deviation (cummins, 2020)
-        F1_STD = 0.519   # f1_co2 std, from zelinka et al. (2020)
-        PRIOR_STD_FACTOR = 0.3  # implies X% std for prior for other less constrained parameters
+        F1_STD = 0.519  # f1_co2 std, from zelinka et al. (2020)
+        PRIOR_STD_FACTOR = (
+            0.3  # implies X% std for prior for other less constrained parameters
+        )
 
         Q_STD = C1_TR * T_IC_STD + C2_TR * T_IC_STD  # std for OHC
         T_R1_STD = ALPHA_R1_TR * T_IC_STD  # std for temp in r1
         T_R2_STD = ALPHA_R2_TR * T_IC_STD  # std for temp in r2
         T_R3_STD = ALPHA_R3_TR * T_IC_STD  # std for temp in r3
-        
+
         # make prior stds vector
-        prior_stds = np.hstack([np.array([T_IC_STD, T_IC_STD,
-                                          Q_STD, T_R1_STD, T_R2_STD, T_R3_STD]),
-                                np.abs(theta_prior_cent[6:8]) * PRIOR_STD_FACTOR,
-                                EPS_STD,
-                                np.abs(theta_prior_cent[9:11]) * PRIOR_STD_FACTOR,
-                                F1_STD, ALPHA_R1_STD, ALPHA_R2_STD, ALPHA_R3_STD, BETA_R1_STD, BETA_R2_STD, BETA_R3_STD,
-                                np.ones(len(mod_errors))])
+        prior_stds = np.hstack(
+            [
+                np.array([T_IC_STD, T_IC_STD, Q_STD, T_R1_STD, T_R2_STD, T_R3_STD]),
+                np.abs(theta_prior_cent[6:8]) * PRIOR_STD_FACTOR,
+                EPS_STD,
+                np.abs(theta_prior_cent[9:11]) * PRIOR_STD_FACTOR,
+                F1_STD,
+                ALPHA_R1_STD,
+                ALPHA_R2_STD,
+                ALPHA_R3_STD,
+                BETA_R1_STD,
+                BETA_R2_STD,
+                BETA_R3_STD,
+                np.ones(len(mod_errors)),
+            ]
+        )
 
         # make inverse covariance matrices for white noise
-        inv_covar_prior = get_covar_white(prior_stds,
-                                          len(prior_stds),
-                                          inv=True)
+        inv_covar_prior = get_covar_white(prior_stds, len(prior_stds), inv=True)
 
         # add in inverse covarianace matrix of model errors (which may not be
         # white, like the other parameters)
-        inv_covar_prior[-len(mod_errors):,
-                        -len(mod_errors):] = np.linalg.inv(mod_error_covar)
+        inv_covar_prior[-len(mod_errors) :, -len(mod_errors) :] = np.linalg.inv(
+            mod_error_covar
+        )
 
         # make observation error covariance matrices
-        inv_covar_T1_obs = get_covar_white(np.array([OBS_T1_STD] *
-                                                    len(times)),
-                                           len(times), inv=True)
+        inv_covar_T1_obs = get_covar_white(
+            np.array([OBS_T1_STD] * len(times)), len(times), inv=True
+        )
 
-        inv_covar_Q_obs = get_covar_white(np.array([OBS_Q_STD] *
-                                                   len(times)), len(times),
-                                          inv=True)
+        inv_covar_Q_obs = get_covar_white(
+            np.array([OBS_Q_STD] * len(times)), len(times), inv=True
+        )
 
-        inv_covar_T_R1_obs = get_covar_white(np.array([OBS_T_R1_STD] *
-                                                   len(times)), len(times),
-                                            inv=True)
+        inv_covar_T_R1_obs = get_covar_white(
+            np.array([OBS_T_R1_STD] * len(times)), len(times), inv=True
+        )
 
-        inv_covar_T_R2_obs = get_covar_white(np.array([OBS_T_R2_STD] *
-                                                   len(times)), len(times),
-                                            inv=True)
-        
-        inv_covar_T_R3_obs = get_covar_white(np.array([OBS_T_R3_STD] *
-                                                   len(times)), len(times),
-                                            inv=True)
+        inv_covar_T_R2_obs = get_covar_white(
+            np.array([OBS_T_R2_STD] * len(times)), len(times), inv=True
+        )
+
+        inv_covar_T_R3_obs = get_covar_white(
+            np.array([OBS_T_R3_STD] * len(times)), len(times), inv=True
+        )
 
         # make observations from true data
         obs = get_obs_from_dynamics(data_tr_p)
@@ -311,13 +443,13 @@ if __name__ == "__main__":
         if CHECK_TLM:
             # set (small) integration horizon and min/max perturbation sizes
             ALPHA_MIN = 1e-16
-            ALPHA_MAX = 1.
+            ALPHA_MAX = 1.0
 
             # check tlm and save output of that procedure
-            _ = get_tlm_check(e, theta_tr, TMIN, TMAX, DT, ALPHA_MIN,
-                              ALPHA_MAX, SAVE_RESULTS=True)
+            _ = get_tlm_check(
+                e, theta_tr, TMIN, TMAX, DT, ALPHA_MIN, ALPHA_MAX, SAVE_RESULTS=True
+            )
 
-        
         # -----------------------------------------------
         # If desired, check adjoint accuracy
         # -----------------------------------------------
@@ -325,32 +457,34 @@ if __name__ == "__main__":
             # Check 1: Adjoint Identity
 
             # do first check
-            _ = get_adj_id_check(e, theta_tr, TMIN, TMAX, DT,
-                                 SAVE_RESULTS=True)
+            _ = get_adj_id_check(e, theta_tr, TMIN, TMAX, DT, SAVE_RESULTS=True)
 
             # Check 2: Gradient of Cost Function
             ALPHA_MIN = 1e-16
             ALPHA_MAX = 1.0
 
             # run check function
-            _ = get_cost_grad_check(control=theta_tr * 1.1,
-                                    cost_args=[theta_tr,
-                                               inv_covar_prior,
-                                               inv_covar_T1_obs,
-                                               inv_covar_Q_obs,
-                                               inv_covar_T_R1_obs,
-                                               inv_covar_T_R2_obs,
-                                               inv_covar_T_R3_obs,
-                                               obs,
-                                               e,
-                                               TMIN,
-                                               TMAX,
-                                               DT],
-                                    ALPHA_MIN=ALPHA_MIN,
-                                    ALPHA_MAX=ALPHA_MAX,
-                                    SAVE_RESULTS=True)
+            _ = get_cost_grad_check(
+                control=theta_tr * 1.1,
+                cost_args=[
+                    theta_tr,
+                    inv_covar_prior,
+                    inv_covar_T1_obs,
+                    inv_covar_Q_obs,
+                    inv_covar_T_R1_obs,
+                    inv_covar_T_R2_obs,
+                    inv_covar_T_R3_obs,
+                    obs,
+                    e,
+                    TMIN,
+                    TMAX,
+                    DT,
+                ],
+                ALPHA_MIN=ALPHA_MIN,
+                ALPHA_MAX=ALPHA_MAX,
+                SAVE_RESULTS=True,
+            )
 
-        
         # ----------------------------------------
         # Set up optimization
         # ----------------------------------------
@@ -358,30 +492,43 @@ if __name__ == "__main__":
         tol = 0.001  # tolerance for convergence in 4DVAR
 
         # give first guess at initial conditions
-        theta_prior = get_prior_draws(theta_prior_cent,
-                                      np.linalg.inv(inv_covar_prior),
-                                      N_ENS)
-        
+        theta_prior = get_prior_draws(
+            theta_prior_cent, np.linalg.inv(inv_covar_prior), N_ENS
+        )
+
         # Check on object sizes
-        #print("emissions object is:")
-        #print(sys.getsizeof(e))
-        #print(asizeof.asizeof(e) / 1e6)
+        # print("emissions object is:")
+        # print(sys.getsizeof(e))
+        # print(asizeof.asizeof(e) / 1e6)
 
         # scatter emissions baseline class and true observations to each
-        # dask worker 
+        # dask worker
         e_scat = c.scatter(e, broadcast=True)
 
         # make list of ensemble members
-        ensemble_members = [EnsembleMember(theta_p,
-                                           -1, tol, max_iter,
-                                           TMIN, TMAX, DT, theta_tr,
-                                           inv_covar_prior, inv_covar_T1_obs,
-                                           inv_covar_Q_obs, inv_covar_T_R1_obs,
-                                           inv_covar_T_R2_obs, inv_covar_T_R3_obs,
-                                           obs, times)
-                            for theta_p in theta_prior]
-        
-        #for i, ee in enumerate(ensemble_members):
+        ensemble_members = [
+            EnsembleMember(
+                theta_p,
+                -1,
+                tol,
+                max_iter,
+                TMIN,
+                TMAX,
+                DT,
+                theta_tr,
+                inv_covar_prior,
+                inv_covar_T1_obs,
+                inv_covar_Q_obs,
+                inv_covar_T_R1_obs,
+                inv_covar_T_R2_obs,
+                inv_covar_T_R3_obs,
+                obs,
+                times,
+            )
+            for theta_p in theta_prior
+        ]
+
+        # for i, ee in enumerate(ensemble_members):
         #    print(i, asizeof.asizeof(ee) / 1e6, " MB")
 
         # solve the assimilation using dask
@@ -391,9 +538,8 @@ if __name__ == "__main__":
         print("Solving 4DVAR using DASK...")
 
         # map and compute
-        futures = [c.submit(runner_4dvar, m, e_scat)
-                   for m in ensemble_members]
-        
+        futures = [c.submit(runner_4dvar, m, e_scat) for m in ensemble_members]
+
         # gather results
         opt_ensmems = c.gather(futures)
 
@@ -409,8 +555,7 @@ if __name__ == "__main__":
         l2s = np.array([m.l2 for m in opt_ensmems])
 
         data_hist = np.array([m.data_hist for m in opt_ensmems])
-        controls_hist = np.array([m.controls_hist for m in
-                                  opt_ensmems])
+        controls_hist = np.array([m.controls_hist for m in opt_ensmems])
         cost_hist = np.array([m.cost_hist for m in opt_ensmems])
         l2s_hist = np.array([m.l2s_hist for m in opt_ensmems])
 
@@ -421,84 +566,149 @@ if __name__ == "__main__":
         # make dataset for this assimilation window and save to dictionary that
         # we'll use to make a datatree later
         # ---------------------------------------------------------------------
-        names = np.hstack([['T1', 'T2', 'Q', 'T_R1', 'T_R2', 'T_R3', 'L', 'G', 'EPS', 'C1', 'C2', 'F1_CO2',
-                            'ALPHA_R1', 'ALPHA_R2', 'ALPHA_R3', 'BETA_R1', 'BETA_R2', 'BETA_R3'],
-                           ['q' + str(i) for i in range(len(times))]])
+        names = np.hstack(
+            [
+                [
+                    "T1",
+                    "T2",
+                    "Q",
+                    "T_R1",
+                    "T_R2",
+                    "T_R3",
+                    "L",
+                    "G",
+                    "EPS",
+                    "C1",
+                    "C2",
+                    "F1_CO2",
+                    "ALPHA_R1",
+                    "ALPHA_R2",
+                    "ALPHA_R3",
+                    "BETA_R1",
+                    "BETA_R2",
+                    "BETA_R3",
+                ],
+                ["q" + str(i) for i in range(len(times))],
+            ]
+        )
 
-        ds = xr.Dataset(data_vars={'data_final': (['ens_mem', 'vari', 'time'],
-                                                  data),
-                                   'l2s': (['ens_mem'], l2s),
-                                   'costs': (['ens_mem'], costs),
-                                   'controls': (['ens_mem', 'vari'], controls),
-                                   'data_hist': (['ens_mem', 'vari', 'iter',
-                                                  'time'], data_hist),
-                                   'l2_hist': (['ens_mem', 'iter'], l2s_hist),
-                                   'cost_hist': (['ens_mem', 'iter'],
-                                                 cost_hist),
-                                   'controls_hist': (['ens_mem', 'vari',
-                                                      'iter'],
-                                                     controls_hist),
-                                   'flag': (['ens_mem'], flags),
-                                   'obs': (['obs_var', 'time'], obs),
-                                   'data_truth': (['vari', 'time'], data_tr_p),
-                                   'controls_truth': (['vari'], theta_tr)},
-                        coords={'time': (['time'], times),
-                                'iter': (['iter'], np.arange(0, max_iter + 1,
-                                                             1)),
-                                'vari': (['vari'], names),
-                                'ens_mem': (['ens_mem'], np.arange(0, N_ENS,
-                                                                   1)),
-                                'obs_var': (['obs_var'], ['T1', 'Q', 'T_R1', 'T_R2', 'T_R3'])},
-                        attrs={'TMIN': TMIN,
-                               'TMAX': TMAX,
-                               'DT': DT,
-                               'max_iter': max_iter,
-                               'tol': tol,
-                               'run_time': t1 - t0,
-                               'ECS': ECS_TR,
-                               'ANGLE': THETA,
-                               'assim_tmax': tmax_assims,
-                               'internal_variability_std': INT_VAR_STD})
+        ds = xr.Dataset(
+            data_vars={
+                "data_final": (["ens_mem", "vari", "time"], data),
+                "l2s": (["ens_mem"], l2s),
+                "costs": (["ens_mem"], costs),
+                "controls": (["ens_mem", "vari"], controls),
+                "data_hist": (["ens_mem", "vari", "iter", "time"], data_hist),
+                "l2_hist": (["ens_mem", "iter"], l2s_hist),
+                "cost_hist": (["ens_mem", "iter"], cost_hist),
+                "controls_hist": (["ens_mem", "vari", "iter"], controls_hist),
+                "flag": (["ens_mem"], flags),
+                "obs": (["obs_var", "time"], obs),
+                "data_truth": (["vari", "time"], data_tr_p),
+                "controls_truth": (["vari"], theta_tr),
+            },
+            coords={
+                "time": (["time"], times),
+                "iter": (["iter"], np.arange(0, max_iter + 1, 1)),
+                "vari": (["vari"], names),
+                "ens_mem": (["ens_mem"], np.arange(0, N_ENS, 1)),
+                "obs_var": (["obs_var"], ["T1", "Q", "T_R1", "T_R2", "T_R3"]),
+            },
+            attrs={
+                "TMIN": TMIN,
+                "TMAX": TMAX,
+                "DT": DT,
+                "max_iter": max_iter,
+                "tol": tol,
+                "run_time": t1 - t0,
+                "ECS": ECS_TR,
+                "ANGLE": THETA,
+                "assim_tmax": tmax_assims,
+                "internal_variability_std": INT_VAR_STD,
+            },
+        )
 
         datatree_dict[str(TMAX)] = ds
 
-    dt = DataTree.from_dict(datatree_dict, 'TMAX')
+    dt = DataTree.from_dict(datatree_dict, "TMAX")
 
     if SAVE_OUTPUT:
         # get current directory and save
-        sim_type = 'pco2geowc3'
+        sim_type = "pco2geowc3"
         if not MANUAL_WINDOWING:
-            path = DATA_DIR + '/output/' + sim_type\
-                + '/margobs_ws_'\
-                + SCENARIO + "_"\
-                + sim_type + "_"\
-                + "TMIN" + str(TMIN) + "_"\
-                + "AR" + str(AR_P) + "_"\
-                + "THETA" + str(THETA) + "_"\
-                + "ECS" + str(ECS_TR) + "_"\
-                + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
-                + "NYRSRAMP" + str(N_YEARS_RAMP) + "_"\
-                + "Nwinds" + str(N_windows) + "_"\
-                + "Nens" + str(N_ENS) + ".nc"
+            path = (
+                DATA_DIR
+                + "/output/"
+                + sim_type
+                + "/margobs_ws_"
+                + SCENARIO
+                + "_"
+                + sim_type
+                + "_"
+                + "TMIN"
+                + str(TMIN)
+                + "_"
+                + "AR"
+                + str(AR_P)
+                + "_"
+                + "THETA"
+                + str(THETA)
+                + "_"
+                + "ECS"
+                + str(ECS_TR)
+                + "_"
+                + "DEGpDEC"
+                + str(DEG_PER_DEC)
+                + "_"
+                + "NYRSRAMP"
+                + str(N_YEARS_RAMP)
+                + "_"
+                + "Nwinds"
+                + str(N_windows)
+                + "_"
+                + "Nens"
+                + str(N_ENS)
+                + ".nc"
+            )
         else:
-            path = DATA_DIR + '/output/' + sim_type\
-                + '/margobs_ws_'\
-                + SCENARIO + "_"\
-                + sim_type + "_"\
-                + "TMIN" + str(TMIN) + "_"\
-                + "AR" + str(AR_P) + "_"\
-                + "THETA" + str(THETA) + "_"\
-                + "ECS" + str(ECS_TR) + "_"\
-                + "DEGpDEC" + str(DEG_PER_DEC) + "_"\
-                + "NYRSRAMP" + str(N_YEARS_RAMP) + "_"\
-                + "Nwinds" + str(len(tmax_assims)) + "custom_"\
-                + "Nens" + str(N_ENS) + ".nc"  
-            
-        dt.to_netcdf(filepath=path, mode='w', format='NETCDF4',
-                     engine='netcdf4')
+            path = (
+                DATA_DIR
+                + "/output/"
+                + sim_type
+                + "/margobs_ws_"
+                + SCENARIO
+                + "_"
+                + sim_type
+                + "_"
+                + "TMIN"
+                + str(TMIN)
+                + "_"
+                + "AR"
+                + str(AR_P)
+                + "_"
+                + "THETA"
+                + str(THETA)
+                + "_"
+                + "ECS"
+                + str(ECS_TR)
+                + "_"
+                + "DEGpDEC"
+                + str(DEG_PER_DEC)
+                + "_"
+                + "NYRSRAMP"
+                + str(N_YEARS_RAMP)
+                + "_"
+                + "Nwinds"
+                + str(len(tmax_assims))
+                + "custom_"
+                + "Nens"
+                + str(N_ENS)
+                + ".nc"
+            )
+
+        dt.to_netcdf(filepath=path, mode="w", format="NETCDF4", engine="netcdf4")
 
         print("\nOutput successfully saved to:\n{}\n".format(path))
 
     else:
         print(dt)
-    

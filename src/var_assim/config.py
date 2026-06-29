@@ -52,7 +52,13 @@ def parse_args():
         type=str,
         default="pco2geowc",
         required=True,
-        choices=["pco2geowc", "pco2geowc3", "pco2geowc_nn", "pco2geowc_reg"],
+        choices=[
+            "pco2geowc",
+            "pco2geowc3",
+            "pco2geowc_nn",
+            "pco2geowc_reg",
+            "pco2geowc3_reg",
+        ],
         help="The model equations to use",
     )
 
@@ -179,6 +185,9 @@ def check_config_compatability(args):
         )
 
     if args.model == "pco2geowc_reg" and not args.reg_noise:
+        raise ValueError(f"{args.model} cannot be run without --reg_noise flag")
+
+    if args.model == "pco2geowc3_reg" and not args.reg_noise:
         raise ValueError(f"{args.model} cannot be run without --reg_noise flag")
 
 

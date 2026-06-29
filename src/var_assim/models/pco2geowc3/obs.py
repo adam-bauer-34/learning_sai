@@ -1,12 +1,10 @@
-"""Observation operator related functions.
-"""
+"""Observation operator related functions."""
 
 import numpy as np
 
 
 def get_obs_from_dynamics(paths, noise=False, noise_params=None):
-    """Observation operator.
-    """
+    """Observation operator."""
 
     # cast paths into observed quantities
     T1 = paths[0]
@@ -20,10 +18,8 @@ def get_obs_from_dynamics(paths, noise=False, noise_params=None):
     if noise:
         # apply noise to observations
         means, covs = noise_params
-        T1_noise = np.random.multivariate_normal([means[0]] * len(T1),
-                                                 covs[0])
-        Q_noise = np.random.multivariate_normal([means[1]] * len(Q),
-                                                covs[1])
+        T1_noise = np.random.multivariate_normal([means[0]] * len(T1), covs[0])
+        Q_noise = np.random.multivariate_normal([means[1]] * len(Q), covs[1])
 
         obs[0] += T1_noise
         obs[1] += Q_noise
