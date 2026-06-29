@@ -11,10 +11,10 @@ from .dynamics import get_TLM_matrix, get_tlm_path
 from .obs import get_obs_from_dynamics, get_obs_jac
 
 
-def get_adj_path(e, theta, TMIN, TMAX, DT, nl_path, covars=None,
-                 obs=None, id_check=True):
-    """Adjoint path.
-    """
+def get_adj_path(
+    e, theta, TMIN, TMAX, DT, nl_path, covars=None, obs=None, id_check=True
+):
+    """Adjoint path."""
 
     # initalize adjoint path
     adj_path = np.zeros_like(nl_path, dtype=float)
@@ -27,18 +27,18 @@ def get_adj_path(e, theta, TMIN, TMAX, DT, nl_path, covars=None,
         adj_path[:, -1] = tlm_path[:, -1]
 
         # loop backwards and integrate
-        for i in range(TMAX-TMIN, 0, -1):
+        for i in range(TMAX - TMIN, 0, -1):
             # extract adjoint vector for this time point
             dAdj = adj_path[:, i]
 
             # generate TLM matrix
-            TLM_matrix = get_TLM_matrix(e, i-1, nl_path, DT)
+            TLM_matrix = get_TLM_matrix(e, i - 1, nl_path, DT)
 
             # take transpose to get adjoint
             ADJ_matrix = TLM_matrix.T
 
             # dot into adjoint vector
-            adj_path[:, i-1] = ADJ_matrix @ dAdj
+            adj_path[:, i - 1] = ADJ_matrix @ dAdj
 
     else:
         # in this case, we're using the adjoint to compute the gradient of a
@@ -48,25 +48,23 @@ def get_adj_path(e, theta, TMIN, TMAX, DT, nl_path, covars=None,
         my_obs = get_obs_from_dynamics(nl_path)
 
         # set final timepoint of adjoint equal to forcing at final timepoint
-        adj_path[:, -1] = get_adj_forcing(nl_path, my_obs, obs, covars,
-                                          TMAX-TMIN)
+        adj_path[:, -1] = get_adj_forcing(nl_path, my_obs, obs, covars, TMAX - TMIN)
 
-        for t in range(TMAX-TMIN, 0, -1):
+        for t in range(TMAX - TMIN, 0, -1):
             # compute forcing at this timestep
-            forcing = get_adj_forcing(nl_path, my_obs, obs, covars,
-                                      t-1)
+            forcing = get_adj_forcing(nl_path, my_obs, obs, covars, t - 1)
 
             # extract adjoint vector for this time point
             dAdj = adj_path[:, t]
 
             # generate TLM matrix
-            TLM_matrix = get_TLM_matrix(e, t-1, nl_path, DT)
+            TLM_matrix = get_TLM_matrix(e, t - 1, nl_path, DT)
 
             # take transpose to get ADJ
             ADJ_matrix = TLM_matrix.T
 
             # dot with adjoint vector plus forcing
-            adj_path[:, t-1] = ADJ_matrix @ dAdj + forcing
+            adj_path[:, t - 1] = ADJ_matrix @ dAdj + forcing
 
     return adj_path
 
@@ -104,7 +102,7 @@ def get_adj_forcing(nl_path, my_obs, obs, covars, t_ind):
     # this is a (N_obs, N_states) matrix
     obs_op_jac = get_obs_jac(nl_path, t_ind)
 
-    # compute the misfits 
+    # compute the misfits
     # this is a (N_obs) vector
     misfit = get_misfit_t(my_obs, obs, covars, t_ind)
 
@@ -147,8 +145,7 @@ def get_misfit_t(my_obs, obs, covars, t_ind):
     misfit_t = np.zeros(len(covars))
 
     # unpack covariances
-    (inv_covar_T1, inv_covar_Q,
-        inv_covar_T_R1, inv_covar_T_R2, inv_covar_T_R3) = covars
+    inv_covar_T1, inv_covar_Q, inv_covar_T_R1, inv_covar_T_R2, inv_covar_T_R3 = covars
 
     # compute all the misfits for all times
     misfits = my_obs - obs
