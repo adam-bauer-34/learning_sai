@@ -7,6 +7,8 @@ University of Illinois Urbana-Champaign
 
 import numpy as np
 
+from time import perf_counter
+
 from .cost import cost, grad
 from .dynamics import get_nonlin_path
 from scipy.optimize import minimize
@@ -51,6 +53,7 @@ class EnsembleMember:
         self.inv_covar_T_R2_obs = inv_covar_T_R2_obs
         self.inv_covar_T_R3_obs = inv_covar_T_R3_obs
         self.obs = obs
+        self.timing = {}  # profiler for performance
 
         # make histories for cost, l2, time series, and controls
         self.data_hist = np.zeros(
@@ -93,12 +96,15 @@ def runner_4dvar(mem, e):
     iter_ = 1
 
     # get prior paths
+    t0 = perf_counter()
     prior_p, _ = get_nonlin_path(e, mem.theta_p, mem.TMIN, mem.TMAX, mem.DT)
+    mem.timing["get_prior_path"] = perf_counter() - t0
 
     # set prior paths as first entry in data history
     mem.data_hist[:, 0] = prior_p
 
     # compute the cost function for prior and store in history
+    t0 = perf_counter()
     J0 = cost(
         mem.theta_p,
         args=[
@@ -118,6 +124,7 @@ def runner_4dvar(mem, e):
     )
 
     mem.cost_hist[0] = J0
+    mem.timing["get_first_cost"] = perf_counter() - t0
 
     # set the current member control as the prior
     mem.control = mem.theta_p
@@ -127,7 +134,11 @@ def runner_4dvar(mem, e):
     while mem.l2 > mem.tol:
         # solve optimization problem
         bounds = np.array([(-np.inf, np.inf) for cont in mem.control])
-        bounds[5:13, 0] = 0  # L, G, EPS, C1, C2, F1, a1, a2 >= 0
+        bounds[6:15, 0] = 0  # L, G, EPS, C1, C2, F1, a1, a2, a3 >= 0
+        bounds[18:, :] = (
+            -1.2,
+            1.2,
+        )  # implicit bound on global model errors of 4.5 sigma and regional ~3
 
         sol = minimize(
             cost,
@@ -162,8 +173,10 @@ def runner_4dvar(mem, e):
         mem.l2s_hist[iter_] = mem.l2
 
         # store new trajectory in the data history
+        t0 = perf_counter()
         new_p, _ = get_nonlin_path(e, new_theta, mem.TMIN, mem.TMAX, mem.DT)
         mem.data_hist[:, iter_] = new_p
+        mem.timing["post_path"] = perf_counter() - t0
 
         # if diff > tol, set the first guess as the optimal solution and
         # try again
@@ -184,3 +197,29 @@ def runner_4dvar(mem, e):
     mem.cost = sol.fun
 
     return mem
+
+
+if __name__ == "__main__":
+    import pickle
+    import numpy as np
+
+    m = EnsembleMember(
+        np.zeros(5 + 2 * 3 + 6 + 3 * 77),
+        0,
+        1e-2,
+        100,
+        2023,
+        2100,
+        1.0,
+        np.zeros(5 + 2 * 3 + 6 + 3 * 77),
+        np.zeros((5 + 2 * 3 + 6 + 3 * 77, 5 + 2 * 3 + 6 + 3 * 77)),
+        np.zeros((77, 77)),
+        np.zeros((77, 77)),
+        np.zeros((77, 77)),
+        np.zeros((77, 77)),
+        np.zeros((77, 77)),
+        np.zeros((5, 77)),
+        np.zeros(77),
+    )
+
+    print(f"{len(pickle.dumps(m))/1024**2:.2f} MB")

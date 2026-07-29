@@ -81,7 +81,7 @@ def run_ensemble(c, ensemble_members, e_scat, args, runner_4dvar):
     args : argparse.Namespace
         Parsed command-line arguments. Uses args.n_ens to determine whether
         batched submission is needed.
-    runner_4dvar : callable
+    runner_4dvar : callables
         The 4D-Var optimization function submitted to each Dask worker.
         Signature: runner_4dvar(member: EnsembleMember, e: EmissionsBaseline).
 
@@ -106,3 +106,16 @@ def run_ensemble(c, ensemble_members, e_scat, args, runner_4dvar):
         opt_ensmems = [future.result() for future in as_completed(futures)]
 
     return opt_ensmems
+
+
+if __name__ == "__main__":
+    import logging
+
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+
+    c = start_dask(logger)
+
+    # check memory limits
+    for w, info in c.scheduler_info()["workers"].items():
+        print(w, info["memory_limit"] / 1024**3, "GB")

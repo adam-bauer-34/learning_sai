@@ -7,8 +7,6 @@
 #SBATCH --account=pi-bbcael
 #SBATCH --partition=caslake
 
-#SBATCH --time=2:00:00
-
 # --- ARRAY CONFIGURATION ---
 #SBATCH --array=0-5
 #SBATCH --nodes=1
@@ -35,6 +33,7 @@ ECS=3.0
 DEG_P_DEC=0.1
 N_YRS_RAMP=50
 N_ENS=500
+TIME="2:00:00"
 REG_NOISE=false
 
 while [[ $# -gt 0 ]]; do
@@ -48,6 +47,7 @@ while [[ $# -gt 0 ]]; do
         --deg_p_dec)    DEG_P_DEC="$2";    shift 2 ;;
         --n_yrs_ramp)   N_YRS_RAMP="$2";   shift 2 ;;
         --n_ens)        N_ENS="$2";        shift 2 ;;
+        --time)         TIME="$2";         shift 2 ;;
         --reg_noise)    REG_NOISE=true;    shift ;;
         *) echo "Unknown argument: $1" >&2; exit 1 ;;
     esac
@@ -68,6 +68,7 @@ echo " Array task ID   : $SLURM_ARRAY_TASK_ID"
 echo " Parameter value : $CURRENT_PARAM"
 echo " Node list       : $SLURM_JOB_NODELIST"
 echo " Cores allocated : $SLURM_CPUS_PER_TASK"
+echo " Time limit      : $TIME"
 echo " Memory (MB)     : $SLURM_MEM_PER_NODE"
 echo " Start time      : $(date)"
 echo "--------------------------------------"

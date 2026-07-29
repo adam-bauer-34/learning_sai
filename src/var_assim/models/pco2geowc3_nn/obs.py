@@ -3,7 +3,7 @@
 import numpy as np
 
 
-def get_obs_from_dynamics(paths, noise=False, noise_params=None):
+def get_obs_from_dynamics(paths):
     """Observation operator."""
 
     # cast paths into observed quantities
@@ -14,15 +14,6 @@ def get_obs_from_dynamics(paths, noise=False, noise_params=None):
     T_R3 = paths[5]
 
     obs = np.array([T1, Q, T_R1, T_R2, T_R3])
-
-    if noise:
-        # apply noise to observations
-        means, covs = noise_params
-        T1_noise = np.random.multivariate_normal([means[0]] * len(T1), covs[0])
-        Q_noise = np.random.multivariate_normal([means[1]] * len(Q), covs[1])
-
-        obs[0] += T1_noise
-        obs[1] += Q_noise
 
     return obs
 

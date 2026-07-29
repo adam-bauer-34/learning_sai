@@ -27,7 +27,13 @@ from var_assim.tlm_adj_checks import run_component_checks
 from var_assim.stats.covar import get_covar_white
 from var_assim.stats.draws import get_prior_draws
 from var_assim.postprocessing import process_simulation_window, make_master_datatree
-from var_assim.config import opt_config, DATA_DIR, PERF_REPS_PATH
+from var_assim.config import (
+    opt_config,
+    DATA_DIR,
+    PERF_REPS_PATH,
+    PRIOR_SEED,
+    MOD_ERROR_SEED,
+)
 
 from var_assim.models.pco2geowc3.dynamics import get_nonlin_path
 from var_assim.models.pco2geowc3.obs import get_obs_from_dynamics
@@ -83,7 +89,10 @@ def run_var_assim_experiment(
         )
 
         # make model errors and their covariance matrix
-        mod_errors, mod_error_covar = gen_noise_ts(Noise, len(e.conc["CO2"]))
+        mod_errors_rng = np.random.default_rng(seed=MOD_ERROR_SEED)
+        mod_errors, mod_error_covar = gen_noise_ts(
+            Noise, len(e.conc["CO2"]), rng=mod_errors_rng
+        )
 
         # true vector of controls for this window
         controls_tr = Truth.get_augmented_truth_vector(mod_errors)
@@ -193,8 +202,13 @@ def run_var_assim_experiment(
         max_iter = opt_config["max_iter"]
 
         # give first guess at initial conditions
+        prior_rng = np.random.default_rng(seed=PRIOR_SEED)
         theta_prior = get_prior_draws(
-            args.model, controls_cen, np.linalg.inv(inv_covar_prior), args.n_ens
+            args.model,
+            controls_cen,
+            np.linalg.inv(inv_covar_prior),
+            args.n_ens,
+            rng=prior_rng,
         )
 
         # Check on object sizes
@@ -202,6 +216,16 @@ def run_var_assim_experiment(
             logger.info(
                 f"        >> (DEBUG) Emissions object is of size: {sys.getsizeof(e) / 1e6} MB"
             )
+
+        logger.debug(
+            f"    ! mean of parameter prior: {np.mean(theta_prior[:, :15], axis=0)}"
+        )
+        logger.debug(
+            f"    ! median of parameter prior: {np.median(theta_prior[:, :15], axis=0)}"
+        )
+        logger.debug(
+            f"    ! std of parameter prior: {np.std(theta_prior[:, :15], axis=0)}"
+        )
 
         # scatter emissions baseline class and true observations to each
         # dask worker
@@ -266,6 +290,9 @@ def run_var_assim_experiment(
         logger.info(f"        >> Ensemble data assimilation solved in {RUNTIME} s")
 
         logger.info(f"        >> Processing simulation output")
+
+        # cancel scattered emissions
+        c.cancel(e_scat)
 
         # make variable names list for saving
         var_names = np.hstack(

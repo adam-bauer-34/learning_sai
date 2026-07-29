@@ -130,14 +130,18 @@ class ClimateModelPriors:
         # for T1 and T2 initial conditions, set to internal variability size if the model has noise
         # else, just set to something small (it can't be zero or the covariance matrix will be singular)
         param_dict["T1_STD"] = (
-            Noise.INT_VAR_STD if cli_args.model != "pco2geowc_nn" else 0.1
+            Noise.INT_VAR_STD
+            if (cli_args.model != "pco2geowc_nn" and cli_args.model != "pco2geowc3_nn")
+            else 0.1
         )
         param_dict["T2_STD"] = (
-            Noise.INT_VAR_STD if cli_args.model != "pco2geowc_nn" else 0.1
+            Noise.INT_VAR_STD
+            if (cli_args.model != "pco2geowc_nn" and cli_args.model != "pco2geowc3_nn")
+            else 0.1
         )
         param_dict["Q_STD"] = (
             (param_dict["C1_CEN"] + param_dict["C2_CEN"]) * Noise.INT_VAR_STD
-            if cli_args.model != "pco2geowc_nn"
+            if (cli_args.model != "pco2geowc_nn" and cli_args.model != "pco2geowc3_nn")
             else 0.1 * (param_dict["C1_CEN"] + param_dict["C2_CEN"])
         )
 
@@ -153,7 +157,10 @@ class ClimateModelPriors:
             # if no regional noise, just internal variability adjusts regional ICs
             param_dict["T_REG_STD"] = (
                 np.array(param_dict["ALPHA_CEN"]) * Noise.INT_VAR_STD
-                if cli_args.model != "pco2geowc_nn"
+                if (
+                    cli_args.model != "pco2geowc_nn"
+                    and cli_args.model != "pco2geowc3_nn"
+                )
                 else np.array(param_dict["ALPHA_CEN"]) * 0.1
             )
 

@@ -127,7 +127,7 @@ def runner_4dvar(mem, e):
     while mem.l2 > mem.tol:
         # solve optimization problem
         bounds = np.array([(-np.inf, np.inf) for cont in mem.control])
-        bounds[5:13, 0] = 0  # L, G, EPS, C1, C2, F1, a1, a2 >= 0
+        bounds[6:15, 0] = 0  # L, G, EPS, C1, C2, F1, a1, a2, a3 >= 0
 
         sol = minimize(
             cost,
@@ -150,6 +150,8 @@ def runner_4dvar(mem, e):
             method="SLSQP",
             jac=grad,
         )
+
+        # print(sol.fun)
 
         # set optimal solution as new estimate of control variables
         new_theta = sol.x

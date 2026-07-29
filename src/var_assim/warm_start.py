@@ -24,16 +24,38 @@ def warm_start_simulation(
 
     # make warm start emissions baseline
     e = EmissionsBaseline(
-        logger, args, 1850, args.tmin, geo=False, Prior=Prior, Truth=Truth
+        logger,
+        args,
+        1850,
+        args.tmin,
+        geo=False,
+        Prior=Prior,
+        Truth=Truth,
+        print_level=2,
     )
 
-    if args.model != "pco2geowc_nn":
-        # get true controls vector for model simulation
-        controls_tr_aug = Truth.get_augmented_truth_vector(np.zeros_like(e.conc["CO2"]))
+    if "_nn" in args.model:
+        logger.debug("       >> Running no noise warm start...")
+        controls_tr_aug = Truth.controls_tr.copy()
+
+    elif "_reg" in args.model and "3_reg" not in args.model:
+        # if it's a two region regional model, you need three strings of model errors to warm start the model
+        logger.debug("       >> Running 2 regional noise warm start...")
+        controls_tr_aug = Truth.get_augmented_truth_vector(
+            np.hstack([np.zeros_like(e.conc["CO2"])] * 3)
+        )
+
+    elif "3_reg" in args.model:
+        # if it's a three region regional model, you need 4
+        logger.debug("       >> Running 3 regional noise warm start...")
+        controls_tr_aug = Truth.get_augmented_truth_vector(
+            np.hstack([np.zeros_like(e.conc["CO2"])] * 4)
+        )
 
     else:
-        # when model has no noise, don't augment the truth vector
-        controls_tr_aug = Truth.controls_tr.copy()
+        # get true controls vector for model simulation
+        logger.debug("       >> Running no regional model errors warm start...")
+        controls_tr_aug = Truth.get_augmented_truth_vector(np.zeros_like(e.conc["CO2"]))
 
     # simulate model equations over warm start period
     paths_ws, _ = nonlin_path(e, controls_tr_aug, 1850, args.tmin, DT=1.0)

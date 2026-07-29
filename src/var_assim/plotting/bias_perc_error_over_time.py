@@ -27,6 +27,12 @@ color_list = [
     "#D55E00",
 ]
 
+YAXIS_LABEL_FONTSIZE = 23
+ROW_TITLE_FONTSIZE = YAXIS_LABEL_FONTSIZE + 5
+XAXIS_LABEL_FONTSIZE = YAXIS_LABEL_FONTSIZE
+LEGEND_FONTSIZE = YAXIS_LABEL_FONTSIZE + 2
+TICK_LABEL_FONTSIZE = YAXIS_LABEL_FONTSIZE - 2
+
 
 def make_grid_plot(
     angles,
@@ -89,30 +95,50 @@ def make_grid_plot(
 
     # Set y labels, horizontal line, and y limit
     for rowx in range(NROWS):
-        ax[rowx, 0].set_ylabel(r"med$(\vartheta)$ (Degrees)")
-        ax[rowx, 1].set_ylabel(r"med$(\vartheta) - \vartheta^\dagger$ (Degrees)")
+        ax[rowx, 0].set_ylabel(
+            r"med$(\vartheta)$ (Degrees)", fontsize=YAXIS_LABEL_FONTSIZE
+        )
+        ax[rowx, 1].set_ylabel(
+            r"med$(\vartheta) - \vartheta^\dagger$ (Degrees)",
+            fontsize=YAXIS_LABEL_FONTSIZE,
+        )
         ax[rowx, 1].axhline(0, color="k", linestyle="solid")
-        ax[rowx, 2].set_ylabel(f"{PLO}–{PHI} Percentile Range (Degrees)")
+        ax[rowx, 2].set_ylabel(
+            f"{PLO}–{PHI} Percentile Range (Degrees)", fontsize=YAXIS_LABEL_FONTSIZE
+        )
         ax[rowx, 2].set_ylim((0, Y_UB))
 
     # set x labels for only bottom row
     for a in ax[NROWS - 1]:
-        a.set_xlabel("Year")
+        a.set_xlabel("Year", fontsize=XAXIS_LABEL_FONTSIZE)
 
     # set vertical lines for assimilations windows
     for a in ax.flatten():
         for w in winds:
             a.axvline(w, linestyle="dotted", color="grey", linewidth=1.25)
 
-    # set twin y axis in leftmost panels
+    # Set tick label font sizes
+    for a in ax.flatten():
+        a.tick_params(axis="both", labelsize=TICK_LABEL_FONTSIZE)
+
+    # set twin y axis in rightmost panels
     for rowx in range(ax.shape[0]):
         ax2_rel = ax[rowx, 2].twinx()
-        ax2_rel.set_ylabel(f"Relative {PLO}–{PHI} Range (vs prior)")
+        ax2_rel.set_ylabel(
+            f"Relative {PLO}–{PHI} Range (vs prior)",
+            fontsize=YAXIS_LABEL_FONTSIZE,
+            labelpad=15,
+        )
         ax2_rel.spines["right"].set_visible(True)
         ax2_rel.set_ylim((0, Y_UB / PRIOR_RANGE))
+        ax2_rel.tick_params(axis="y", labelsize=TICK_LABEL_FONTSIZE)
 
     # set legend
-    ax[0, 0].legend(bbox_to_anchor=(3.87, -0.82), ncols=1, frameon=True)
+    ax[0, 0].legend(
+        bbox_to_anchor=(4.05, -0.82), ncols=1, frameon=True, fontsize=LEGEND_FONTSIZE
+    )
+
+    fig.subplots_adjust(hspace=0.25)
 
     # set panel labels
     panel_labels = list(string.ascii_uppercase)[: len(ax.flatten())]
@@ -135,7 +161,13 @@ def make_grid_plot(
         y = ax[rowx, 1].get_position().y1 + 0.01
 
         fig.text(
-            0.5, y, title, ha="center", va="bottom", fontsize=18, fontweight="bold"
+            0.5,
+            y,
+            title,
+            ha="center",
+            va="bottom",
+            fontsize=ROW_TITLE_FONTSIZE,
+            fontweight="bold",
         )
 
     if save_figs:

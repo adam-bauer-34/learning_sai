@@ -39,17 +39,26 @@ def get_nonlin_path(e, theta, TMIN, TMAX, DT):
         BETA_R2,
         BETA_R3,
     ) = params
-    qs = theta[18:]  # model errors
+    Qs = theta[18:]  # model errors
 
     # make time list and bare paths list
     times = np.arange(TMIN, TMAX + DT, DT)
     paths = np.zeros((len(theta), len(times)))
 
+    # extract model errors for gmst and each region
+    q_AT, q_R1, q_R2, q_R3 = (
+        Qs[i * len(times) : (i + 1) * len(times)] for i in range(4)
+    )
+
     # set ics
     paths[:, 0] = theta
 
     # initial condition of T1 is T1_0 + q0
-    paths[0, 0] = T10 + qs[0]
+    # same for each region with model errors
+    paths[0, 0] = T10 + q_AT[0]
+    paths[3, 0] = TR10 + q_R1[0]
+    paths[4, 0] = TR20 + q_R2[0]
+    paths[5, 0] = TR30 + q_R3[0]
 
     # paths[0] = T1, paths[1] = T2
     # iterate through time and integrate two layer model
@@ -60,22 +69,22 @@ def get_nonlin_path(e, theta, TMIN, TMAX, DT):
             (1 - DT * (L + G * EPS) * C1 ** (-1)) * T1
             + DT * G * EPS * C1 ** (-1) * T2
             + DT * C1 ** (-1) * F
-            + DT * C1 ** (-1) * qs[t]
+            + DT * C1 ** (-1) * q_AT[t]
         )
         paths[1, t] = (1 - DT * G * C2 ** (-1)) * T2 + DT * G * C2 ** (-1) * T1
 
         # Q = T1 * C1 + T2 * C2
         paths[2, t] = paths[0, t] * C1 + paths[1, t] * C2
 
-        # Tr = alpha_r * T1 - beta_r * geo_level
-        paths[3, t] = ALPHA_R1 * paths[0, t] + BETA_R1 * e.emis["geo"][t]
+        # Tr = alpha_r * T1 - beta_r * geo_level + regional_noise
+        paths[3, t] = ALPHA_R1 * paths[0, t] + BETA_R1 * e.emis["geo"][t] + q_R1[t]
 
-        paths[4, t] = ALPHA_R2 * paths[0, t] + BETA_R2 * e.emis["geo"][t]
+        paths[4, t] = ALPHA_R2 * paths[0, t] + BETA_R2 * e.emis["geo"][t] + q_R2[t]
 
-        paths[5, t] = ALPHA_R3 * paths[0, t] + BETA_R3 * e.emis["geo"][t]
+        paths[5, t] = ALPHA_R3 * paths[0, t] + BETA_R3 * e.emis["geo"][t] + q_R3[t]
 
     # make stationary paths for parameters and model errors
-    paths[6:] = np.array([[theta[6 + i]] * len(times) for i in range(len(theta) - 6)])
+    paths[6:] = theta[6:, None]
 
     # return paths and times
     return paths, times
@@ -118,13 +127,21 @@ def get_tlm_path(e, theta, TMIN, TMAX, DT, nl_path):
         BETA_R2,
         BETA_R3,
     ) = params
-    qs = theta[18:]  # model errors
+    Qs = theta[18:]  # model errors
+
+    # extract model errors for gmst and each region
+    q_AT, q_R1, q_R2, q_R3 = (
+        Qs[i * len(times) : (i + 1) * len(times)] for i in range(4)
+    )
 
     # set ics
     paths[:, 0] = theta
 
     # initial conditions of T1 is T1_0 + q0
-    paths[0, 0] = T10 + qs[0]
+    paths[0, 0] = T10 + q_AT[0]
+    paths[3, 0] = TR10 + q_R1[0]
+    paths[4, 0] = TR20 + q_R2[0]
+    paths[5, 0] = TR30 + q_R3[0]
 
     # paths[0] = T1, paths[1] = T2
     # iterate through time and integrate two layer model
@@ -166,7 +183,11 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
         BETA_R2,
         BETA_R3,
     ) = nl_path[:18, t]
-    mod_error = nl_path[18:, t]
+    Qs = nl_path[18:, t]
+
+    N_times = np.shape(nl_path)[1]  # number of timesteps in this nl_path
+
+    q_AT, q_R1, q_R2, q_R3 = (Qs[i * N_times : (i + 1) * N_times] for i in range(4))
 
     # initialize empty TLM
     TLM_matrix = np.zeros((np.shape(nl_path)[0], np.shape(nl_path)[0]))
@@ -187,7 +208,7 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[0, 7] = DT * EPS * (T2 - T1) / C1
     TLM_matrix[0, 8] = DT * (T2 - T1) * G / C1
     TLM_matrix[0, 9] = (
-        (T1 * (G * EPS + L) - T2 * G * EPS - F - mod_error[t + 1]) * DT * C1 ** (-2)
+        (T1 * (G * EPS + L) - T2 * G * EPS - F - q_AT[t + 1]) * DT * C1 ** (-2)
     )
     TLM_matrix[0, 10] = 0.0
     TLM_matrix[0, 11] = DT * np.log(e.conc["CO2"][t] / 278.3) / C1
@@ -256,12 +277,12 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[3, 7] = DT * (T2 - T1) * ALPHA_R1 * EPS / C1
     TLM_matrix[3, 8] = DT * (T2 - T1) * ALPHA_R1 * G / C1
     TLM_matrix[3, 9] = (DT * ALPHA_R1 / C1**2) * (
-        -mod_error[t + 1] + T1 * (G * EPS + L) - T2 * G * EPS - F
+        -q_AT[t + 1] + T1 * (G * EPS + L) - T2 * G * EPS - F
     )
     TLM_matrix[3, 10] = 0.0
     TLM_matrix[3, 11] = DT * ALPHA_R1 * np.log(e.conc["CO2"][t] / 278.3) / C1
     TLM_matrix[3, 12] = (
-        T1 + DT * (mod_error[t + 1] - T1 * (G * EPS + L) + T2 * G * EPS + F) / C1
+        T1 + DT * (q_AT[t + 1] - T1 * (G * EPS + L) + T2 * G * EPS + F) / C1
     )
     TLM_matrix[3, 13] = 0.0
     TLM_matrix[3, 14] = 0.0
@@ -269,6 +290,7 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[3, 16] = 0.0
     TLM_matrix[3, 17] = 0.0
     TLM_matrix[3, 18 + t] = DT * ALPHA_R1 / C1  # this bit is for model errors
+    TLM_matrix[3, 18 + N_times + t] = 1.0  # regional model errors for R1
 
     # fifth row
     # regional temperature 2
@@ -282,19 +304,20 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[4, 7] = DT * (T2 - T1) * ALPHA_R2 * EPS / C1
     TLM_matrix[4, 8] = DT * (T2 - T1) * ALPHA_R2 * G / C1
     TLM_matrix[4, 9] = (DT * ALPHA_R2 / C1**2) * (
-        -mod_error[t + 1] + T1 * (G * EPS + L) - T2 * G * EPS - F
+        -q_AT[t + 1] + T1 * (G * EPS + L) - T2 * G * EPS - F
     )
     TLM_matrix[4, 10] = 0.0
     TLM_matrix[4, 11] = DT * ALPHA_R2 * np.log(e.conc["CO2"][t] / 278.3) / C1
     TLM_matrix[4, 12] = 0.0
     TLM_matrix[4, 13] = (
-        T1 + DT * (mod_error[t + 1] - T1 * (G * EPS + L) + T2 * G * EPS + F) / C1
+        T1 + DT * (q_AT[t + 1] - T1 * (G * EPS + L) + T2 * G * EPS + F) / C1
     )
     TLM_matrix[4, 14] = 0.0
     TLM_matrix[4, 15] = 0.0
     TLM_matrix[4, 16] = e.emis["geo"][t + 1]
     TLM_matrix[4, 17] = 0.0
     TLM_matrix[4, 18 + t] = DT * ALPHA_R2 / C1  # this bit is for model errors
+    TLM_matrix[4, 18 + 2 * N_times + t] = 1.0  # regional model errors for R2
 
     # sixth row
     # regional temperature 3
@@ -308,22 +331,24 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[5, 7] = DT * (T2 - T1) * ALPHA_R3 * EPS / C1
     TLM_matrix[5, 8] = DT * (T2 - T1) * ALPHA_R3 * G / C1
     TLM_matrix[5, 9] = (DT * ALPHA_R3 / C1**2) * (
-        -mod_error[t + 1] + T1 * (G * EPS + L) - T2 * G * EPS - F
+        -q_AT[t + 1] + T1 * (G * EPS + L) - T2 * G * EPS - F
     )
     TLM_matrix[5, 10] = 0.0
     TLM_matrix[5, 11] = DT * ALPHA_R3 * np.log(e.conc["CO2"][t] / 278.3) / C1
     TLM_matrix[5, 12] = 0.0
     TLM_matrix[5, 13] = 0.0
     TLM_matrix[5, 14] = (
-        T1 + DT * (mod_error[t + 1] - T1 * (G * EPS + L) + T2 * G * EPS + F) / C1
+        T1 + DT * (q_AT[t + 1] - T1 * (G * EPS + L) + T2 * G * EPS + F) / C1
     )
     TLM_matrix[5, 15] = 0.0
     TLM_matrix[5, 16] = 0.0
     TLM_matrix[5, 17] = e.emis["geo"][t + 1]
     TLM_matrix[5, 18 + t] = DT * ALPHA_R3 / C1  # this bit is for model errors
+    TLM_matrix[5, 18 + 3 * N_times + t] = 1.0  # regional model errors for R3
 
     # all the parameters are just the identity
-    TLM_matrix[6:, 6:] = np.identity(len(nl_path[6:, t]))
+    unity_inds = np.arange(6, TLM_matrix.shape[0])
+    TLM_matrix[unity_inds, unity_inds] = 1.0
 
     if CHECK_TLM:
         print(TLM_matrix[0])

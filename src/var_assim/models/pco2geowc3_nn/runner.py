@@ -32,14 +32,11 @@ from var_assim.config import (
     DATA_DIR,
     PERF_REPS_PATH,
     PRIOR_SEED,
-    MOD_ERROR_SEED,
-    REG1_NOISE_SEED,
-    REG2_NOISE_SEED,
 )
 
-from var_assim.models.pco2geowc_reg.dynamics import get_nonlin_path
-from var_assim.models.pco2geowc_reg.obs import get_obs_from_dynamics
-from var_assim.models.pco2geowc_reg.parallelization import EnsembleMember, runner_4dvar
+from var_assim.models.pco2geowc3_nn.dynamics import get_nonlin_path
+from var_assim.models.pco2geowc3_nn.obs import get_obs_from_dynamics
+from var_assim.models.pco2geowc3_nn.parallelization import EnsembleMember, runner_4dvar
 
 SLURM_JOB_ID = os.environ.get("SLURM_JOB_ID", "local")
 
@@ -87,78 +84,18 @@ def run_var_assim_experiment(
             print_level=2,
         )
 
-        N_timesteps = len(e.conc["CO2"])
-
-        # make global model errors and their covariance matrix
-        mod_errors_rng = np.random.default_rng(seed=MOD_ERROR_SEED)
-        mod_errors, mod_error_covar = gen_noise_ts(
-            Noise, N_timesteps, rng=mod_errors_rng
-        )
-
-        # make regional covariance matrices
-        r1_rng = np.random.default_rng(seed=REG1_NOISE_SEED)
-        r2_rng = np.random.default_rng(seed=REG2_NOISE_SEED)
-
-        # regions (in this case, 2)
-        R1_mod_error_covar, R2_mod_error_covar = [
-            get_covar_white(
-                np.array([INT_T_REGx_STD] * N_timesteps),
-                N_timesteps,
-                inv=True,
-            )
-            for INT_T_REGx_STD in Noise.INT_T_REG_STD
-        ]
-
-        # make model error time series
-        mod_errors_r1 = r1_rng.multivariate_normal(
-            np.array([0.0] * N_timesteps), R1_mod_error_covar
-        )
-
-        mod_errors_r2 = r2_rng.multivariate_normal(
-            np.array([0.0] * N_timesteps), R2_mod_error_covar
-        )
-
-        logger.debug(f"    ! region 1 model errors: {mod_errors_r1}")
-        logger.debug(f"    ! region 2 model errors: {mod_errors_r2}")
-
-        # combine all model errors into one long vector
-        all_mod_errors = np.hstack([mod_errors, mod_errors_r1, mod_errors_r2])
-
-        # true vector of controls for this window
-        controls_tr = Truth.get_augmented_truth_vector(all_mod_errors)
-
-        if args.debug:
-            logger.info(f"        >> (DEBUG) Controls vector: {controls_tr}")
-            logger.info(
-                f"        >> (DEBUG) Controls vector length: {len(controls_tr)}"
-            )
-
-        # central value of priors on each parameter
-        controls_cen = Prior.get_augmented_cen_vector(np.zeros_like(all_mod_errors))
-
         # make true data path over this time window
-        data_tr_p, times = get_nonlin_path(e, controls_tr, TMIN, TMAX, DT=1.0)
+        data_tr_p, times = get_nonlin_path(e, Truth.controls_tr, TMIN, TMAX, DT=1.0)
 
-        # make prior stds vector
-        regional_stds = np.hstack(
-            [[INT_T_REGx_STD] * N_timesteps for INT_T_REGx_STD in Noise.INT_T_REG_STD]
+        logger.debug(
+            f"    ! central prior: {Prior.controls_std} | prior std: {Prior.controls_std}"
         )
-        # NOTE: mod errors can be red, so insert dummy here an insert their inverse cov
-        # matrix later
-        full_std_vector = np.hstack([np.ones_like(mod_errors), regional_stds])
-
-        # make full stds vector
-        prior_stds = Prior.get_augmented_std_vector(full_std_vector)
-        logger.debug(f"    ! full std vector for prior: {prior_stds}")
 
         # make inverse covariance matrices for white noise
-        inv_covar_prior = get_covar_white(prior_stds, len(prior_stds), inv=True)
-
-        # add in inverse covarianace matrix of model errors (which may not be
-        # white, like the other parameters)
-        inv_covar_prior[15 : 15 + len(mod_errors), 15 : 15 + len(mod_errors)] = (
-            np.linalg.inv(mod_error_covar)
+        inv_covar_prior = get_covar_white(
+            Prior.controls_std, len(Prior.controls_std), inv=True
         )
+
         logger.debug(f"    ! inverse covariance matrix for prior: {inv_covar_prior}")
 
         # make observation error covariance matrices
@@ -173,7 +110,7 @@ def run_var_assim_experiment(
         )
 
         # regions (in this case, 2)
-        inv_covar_T_R1_obs, inv_covar_T_R2_obs = [
+        inv_covar_T_R1_obs, inv_covar_T_R2_obs, inv_covar_T_R3_obs = [
             get_covar_white(
                 np.array([OBS_T_REGx_STD] * len(times)), len(times), inv=True
             )
@@ -181,7 +118,7 @@ def run_var_assim_experiment(
         ]
 
         # make observations from true data without any additional noise
-        obs = get_obs_from_dynamics(data_tr_p, noise=False)
+        obs = get_obs_from_dynamics(data_tr_p)
 
         # If flagged, check components of variational data assimilation module
         if args.check_components and TMAX == 2100:
@@ -191,16 +128,17 @@ def run_var_assim_experiment(
             run_component_checks(
                 args,
                 e,
-                controls_tr,
+                Truth.controls_tr,
                 TMIN,
                 TMAX,
                 cost_args=[
-                    controls_tr,
+                    Truth.controls_tr,
                     inv_covar_prior,
                     inv_covar_T1_obs,
                     inv_covar_Q_obs,
                     inv_covar_T_R1_obs,
                     inv_covar_T_R2_obs,
+                    inv_covar_T_R3_obs,
                     obs,
                     e,
                     TMIN,
@@ -208,9 +146,9 @@ def run_var_assim_experiment(
                     DT,
                 ],
             )
-            logger.info(f"        >> (FLAGGED) Checks complete")
+            logger.info(f"            >>> (FLAGGED) Checks complete")
             logger.info(
-                f"        >> (FLAGGED) .csv files saved to {DATA_DIR}/checks/{args.model}"
+                f"            >>> (FLAGGED) .csv files saved to {DATA_DIR}/checks/{args.model}"
             )
 
         # optimization parameters
@@ -221,20 +159,20 @@ def run_var_assim_experiment(
         prior_rng = np.random.default_rng(seed=PRIOR_SEED)
         theta_prior = get_prior_draws(
             args.model,
-            controls_cen,
+            Prior.controls_cen,
             np.linalg.inv(inv_covar_prior),
             args.n_ens,
             rng=prior_rng,
         )
 
         logger.debug(
-            f"    ! mean of parameter prior: {np.mean(theta_prior[:, :15], axis=0)}"
+            f"    ! mean of parameter prior: {np.mean(theta_prior[:, :18], axis=0)}"
         )
         logger.debug(
-            f"    ! median of parameter prior: {np.median(theta_prior[:, :15], axis=0)}"
+            f"    ! median of parameter prior: {np.median(theta_prior[:, :18], axis=0)}"
         )
         logger.debug(
-            f"    ! std of parameter prior: {np.std(theta_prior[:, :15], axis=0)}"
+            f"    ! std of parameter prior: {np.std(theta_prior[:, :18], axis=0)}"
         )
 
         # Check on object sizes
@@ -257,12 +195,13 @@ def run_var_assim_experiment(
                 TMIN,
                 TMAX,
                 DT,
-                controls_tr,
+                Truth.controls_tr,
                 inv_covar_prior,
                 inv_covar_T1_obs,
                 inv_covar_Q_obs,
                 inv_covar_T_R1_obs,
                 inv_covar_T_R2_obs,
+                inv_covar_T_R3_obs,
                 obs,
                 times,
             )
@@ -310,32 +249,28 @@ def run_var_assim_experiment(
         c.cancel(e_scat)
 
         # make variable names list for saving
-        var_names = np.hstack(
-            [
-                [
-                    "T1",
-                    "T2",
-                    "Q",
-                    "T_R1",
-                    "T_R2",
-                    "L",
-                    "G",
-                    "EPS",
-                    "C1",
-                    "C2",
-                    "F1_CO2",
-                    "ALPHA_R1",
-                    "ALPHA_R2",
-                    "BETA_R1",
-                    "BETA_R2",
-                ],
-                ["qAT_" + str(i) for i in range(len(times))],
-                ["qR1_" + str(i) for i in range(len(times))],
-                ["qR2_" + str(i) for i in range(len(times))],
-            ]
-        )
+        var_names = [
+            "T1",
+            "T2",
+            "Q",
+            "T_R1",
+            "T_R2",
+            "T_R3",
+            "L",
+            "G",
+            "EPS",
+            "C1",
+            "C2",
+            "F1_CO2",
+            "ALPHA_R1",
+            "ALPHA_R2",
+            "ALPHA_R3",
+            "BETA_R1",
+            "BETA_R2",
+            "BETA_R3",
+        ]
 
-        obs_names = ["T1", "Q", "T_R1", "T_R2"]
+        obs_names = ["T1", "Q", "T_R1", "T_R2", "T_R3"]
 
         # process simulation output into
         ds = process_simulation_window(
@@ -346,7 +281,7 @@ def run_var_assim_experiment(
             opt_ensmems,
             obs,
             data_tr_p,
-            controls_tr,
+            Truth.controls_tr,
             opt_config,
             RUNTIME,
         )

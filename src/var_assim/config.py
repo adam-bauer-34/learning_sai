@@ -52,7 +52,14 @@ def parse_args():
         type=str,
         default="pco2geowc",
         required=True,
-        choices=["pco2geowc", "pco2geowc3", "pco2geowc_nn", "pco2geowc_reg"],
+        choices=[
+            "pco2geowc",
+            "pco2geowc3",
+            "pco2geowc_nn",
+            "pco2geowc_reg",
+            "pco2geowc3_reg",
+            "pco2geowc3_nn",
+        ],
         help="The model equations to use",
     )
 
@@ -163,12 +170,22 @@ def check_config_compatability(args):
     if args.model == "pco2geowc_nn" and args.reg_noise:
         raise ValueError(f"{args.model} is incompatable with regional noise turned on.")
 
+    if args.model == "pco2geowc3_nn" and args.reg_noise:
+        raise ValueError(f"{args.model} is incompatable with regional noise turned on.")
+
     if args.model == "pco2geowc_nn" and args.noise_model != "nn":
         raise ValueError(
             f"{args.model} is not compatabile with any noise model other than 'nn'."
         )
 
-    if args.model != "pco2geowc_nn" and args.noise_model == "nn":
+    if args.model == "pco2geowc3_nn" and args.noise_model != "nn":
+        raise ValueError(
+            f"{args.model} is not compatabile with any noise model other than 'nn'."
+        )
+
+    if (
+        args.model != "pco2geowc_nn" and args.model != "pco2geowc3_nn"
+    ) and args.noise_model == "nn":
         raise ValueError(
             f"{args.model} has internal variability, but no noise model ({args.noise_model}) was passed. Use 'AR1' or 'AR0'."
         )
@@ -179,6 +196,9 @@ def check_config_compatability(args):
         )
 
     if args.model == "pco2geowc_reg" and not args.reg_noise:
+        raise ValueError(f"{args.model} cannot be run without --reg_noise flag")
+
+    if args.model == "pco2geowc3_reg" and not args.reg_noise:
         raise ValueError(f"{args.model} cannot be run without --reg_noise flag")
 
 
