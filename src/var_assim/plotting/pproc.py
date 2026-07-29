@@ -46,7 +46,7 @@ def get_angle_r2(a1, a2, b1, b2, l, e, g, phi=0.09):
     return np.arccos(num / denom) * 180 / np.pi
 
 
-def get_angles_for_dt_list(dts, winds, N_ENS):
+def get_angles_for_dt_list(dts, winds, N_ENS, N_regs=2):
     """Get angles for a list of datatrees.
 
     Parameters
@@ -77,16 +77,37 @@ def get_angles_for_dt_list(dts, winds, N_ENS):
             tmp_l = dt[w].ds.controls.sel(vari="L").values
             tmp_g = dt[w].ds.controls.sel(vari="G").values
             tmp_eps = dt[w].ds.controls.sel(vari="EPS").values
+
+            tmp_a3 = (
+                dt[w].ds.controls.sel(vari="ALPHA_R3").values if N_regs == 3 else None
+            )
+            tmp_b3 = (
+                dt[w].ds.controls.sel(vari="BETA_R3").values if N_regs == 3 else None
+            )
+
             for i in range(N_ENS):
-                angles[d_, w_, i] = get_angle_r2(
-                    tmp_a1[i],
-                    tmp_a2[i],
-                    tmp_b1[i],
-                    tmp_b2[i],
-                    tmp_l[i],
-                    tmp_eps[i],
-                    tmp_g[i],
-                )
+                if N_regs == 3:
+                    angles[d_, w_, i] = get_angle_r3(
+                        tmp_a1[i],
+                        tmp_a2[i],
+                        tmp_a3[i],
+                        tmp_b1[i],
+                        tmp_b2[i],
+                        tmp_b3[i],
+                        tmp_l[i],
+                        tmp_eps[i],
+                        tmp_g[i],
+                    )
+                else:
+                    angles[d_, w_, i] = get_angle_r2(
+                        tmp_a1[i],
+                        tmp_a2[i],
+                        tmp_b1[i],
+                        tmp_b2[i],
+                        tmp_l[i],
+                        tmp_eps[i],
+                        tmp_g[i],
+                    )
 
     return angles
 

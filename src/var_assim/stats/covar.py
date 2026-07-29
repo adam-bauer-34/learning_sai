@@ -30,7 +30,7 @@ def get_covar_white(stds, N, inv=False):
         inverse covariance matrix for priors
     """
 
-    covar = stds[:, None]**2 * np.identity(N)
+    covar = stds[:, None] ** 2 * np.identity(N)
 
     if inv:
         return np.linalg.inv(covar)
@@ -71,8 +71,7 @@ def get_covar_ar1(std, corr_coeff, N, inv=False):
 
     for i in range(N):
         for j in range(N):
-            covar[i, j] = corr_coeff**(abs(i - j))\
-                * std**2 / (1 - corr_coeff**2)
+            covar[i, j] = corr_coeff ** (abs(i - j)) * std**2 / (1 - corr_coeff**2)
 
     if inv:
         return np.linalg.inv(covar)

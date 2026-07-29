@@ -35,11 +35,12 @@ from var_assim.config import (
     MOD_ERROR_SEED,
     REG1_NOISE_SEED,
     REG2_NOISE_SEED,
+    REG3_NOISE_SEED,
 )
 
-from var_assim.models.pco2geowc_reg.dynamics import get_nonlin_path
-from var_assim.models.pco2geowc_reg.obs import get_obs_from_dynamics
-from var_assim.models.pco2geowc_reg.parallelization import EnsembleMember, runner_4dvar
+from var_assim.models.pco2geowc3_reg.dynamics import get_nonlin_path
+from var_assim.models.pco2geowc3_reg.obs import get_obs_from_dynamics
+from var_assim.models.pco2geowc3_reg.parallelization import EnsembleMember, runner_4dvar
 
 SLURM_JOB_ID = os.environ.get("SLURM_JOB_ID", "local")
 
@@ -62,7 +63,9 @@ def run_var_assim_experiment(
     """WARM START MODULE.
     """
     logger.info("    > Starting warm start module")
+    t0 = time.time()
     warm_start_simulation(logger, args, Truth, Prior, get_nonlin_path)
+    logger.debug(f"    ! Warm start took {time.time() - t0} s")
     logger.info("    > Warm start complete")
 
     """ASSIMILATION MODULE
@@ -89,6 +92,7 @@ def run_var_assim_experiment(
 
         N_timesteps = len(e.conc["CO2"])
 
+        t0 = time.time()
         # make global model errors and their covariance matrix
         mod_errors_rng = np.random.default_rng(seed=MOD_ERROR_SEED)
         mod_errors, mod_error_covar = gen_noise_ts(
@@ -98,14 +102,11 @@ def run_var_assim_experiment(
         # make regional covariance matrices
         r1_rng = np.random.default_rng(seed=REG1_NOISE_SEED)
         r2_rng = np.random.default_rng(seed=REG2_NOISE_SEED)
+        r3_rng = np.random.default_rng(seed=REG3_NOISE_SEED)
 
         # regions (in this case, 2)
-        R1_mod_error_covar, R2_mod_error_covar = [
-            get_covar_white(
-                np.array([INT_T_REGx_STD] * N_timesteps),
-                N_timesteps,
-                inv=True,
-            )
+        R1_mod_error_covar, R2_mod_error_covar, R3_mod_error_covar = [
+            get_covar_white(np.array([INT_T_REGx_STD] * N_timesteps), N_timesteps)
             for INT_T_REGx_STD in Noise.INT_T_REG_STD
         ]
 
@@ -118,11 +119,18 @@ def run_var_assim_experiment(
             np.array([0.0] * N_timesteps), R2_mod_error_covar
         )
 
-        logger.debug(f"    ! region 1 model errors: {mod_errors_r1}")
-        logger.debug(f"    ! region 2 model errors: {mod_errors_r2}")
+        mod_errors_r3 = r3_rng.multivariate_normal(
+            np.array([0.0] * N_timesteps), R3_mod_error_covar
+        )
+
+        logger.debug(f"    ! region 1 model errors std: {np.std(mod_errors_r1)}")
+        logger.debug(f"    ! region 2 model errors std: {np.std(mod_errors_r2)}")
+        logger.debug(f"    ! region 3 model errors std: {np.std(mod_errors_r3)}")
 
         # combine all model errors into one long vector
-        all_mod_errors = np.hstack([mod_errors, mod_errors_r1, mod_errors_r2])
+        all_mod_errors = np.hstack(
+            [mod_errors, mod_errors_r1, mod_errors_r2, mod_errors_r3]
+        )
 
         # true vector of controls for this window
         controls_tr = Truth.get_augmented_truth_vector(all_mod_errors)
@@ -156,7 +164,7 @@ def run_var_assim_experiment(
 
         # add in inverse covarianace matrix of model errors (which may not be
         # white, like the other parameters)
-        inv_covar_prior[15 : 15 + len(mod_errors), 15 : 15 + len(mod_errors)] = (
+        inv_covar_prior[18 : 18 + len(mod_errors), 18 : 18 + len(mod_errors)] = (
             np.linalg.inv(mod_error_covar)
         )
         logger.debug(f"    ! inverse covariance matrix for prior: {inv_covar_prior}")
@@ -173,12 +181,15 @@ def run_var_assim_experiment(
         )
 
         # regions (in this case, 2)
-        inv_covar_T_R1_obs, inv_covar_T_R2_obs = [
+        inv_covar_T_R1_obs, inv_covar_T_R2_obs, inv_covar_T_R3_obs = [
             get_covar_white(
                 np.array([OBS_T_REGx_STD] * len(times)), len(times), inv=True
             )
             for OBS_T_REGx_STD in Noise.OBS_T_REG_STD
         ]
+        logger.debug(
+            f"    ! noise setup and covariance matrix formulation took {time.time() - t0} s"
+        )
 
         # make observations from true data without any additional noise
         obs = get_obs_from_dynamics(data_tr_p, noise=False)
@@ -201,6 +212,7 @@ def run_var_assim_experiment(
                     inv_covar_Q_obs,
                     inv_covar_T_R1_obs,
                     inv_covar_T_R2_obs,
+                    inv_covar_T_R3_obs,
                     obs,
                     e,
                     TMIN,
@@ -208,9 +220,9 @@ def run_var_assim_experiment(
                     DT,
                 ],
             )
-            logger.info(f"        >> (FLAGGED) Checks complete")
+            logger.info(f"            >>> (FLAGGED) Checks complete")
             logger.info(
-                f"        >> (FLAGGED) .csv files saved to {DATA_DIR}/checks/{args.model}"
+                f"            >>> (FLAGGED) .csv files saved to {DATA_DIR}/checks/{args.model}"
             )
 
         # optimization parameters
@@ -218,6 +230,7 @@ def run_var_assim_experiment(
         max_iter = opt_config["max_iter"]
 
         # give first guess at initial conditions
+        t0 = time.time()
         prior_rng = np.random.default_rng(seed=PRIOR_SEED)
         theta_prior = get_prior_draws(
             args.model,
@@ -226,15 +239,16 @@ def run_var_assim_experiment(
             args.n_ens,
             rng=prior_rng,
         )
+        logger.debug(f"    ! generating prior draws took {time.time() - t0} s")
 
         logger.debug(
-            f"    ! mean of parameter prior: {np.mean(theta_prior[:, :15], axis=0)}"
+            f"    ! mean of parameter prior: {np.mean(theta_prior[:, 18], axis=0)}"
         )
         logger.debug(
-            f"    ! median of parameter prior: {np.median(theta_prior[:, :15], axis=0)}"
+            f"    ! median of parameter prior: {np.median(theta_prior[:, 18], axis=0)}"
         )
         logger.debug(
-            f"    ! std of parameter prior: {np.std(theta_prior[:, :15], axis=0)}"
+            f"    ! std of parameter prior: {np.std(theta_prior[:, 18], axis=0)}"
         )
 
         # Check on object sizes
@@ -263,6 +277,7 @@ def run_var_assim_experiment(
                 inv_covar_Q_obs,
                 inv_covar_T_R1_obs,
                 inv_covar_T_R2_obs,
+                inv_covar_T_R3_obs,
                 obs,
                 times,
             )
@@ -318,6 +333,7 @@ def run_var_assim_experiment(
                     "Q",
                     "T_R1",
                     "T_R2",
+                    "T_R3",
                     "L",
                     "G",
                     "EPS",
@@ -326,16 +342,19 @@ def run_var_assim_experiment(
                     "F1_CO2",
                     "ALPHA_R1",
                     "ALPHA_R2",
+                    "ALPHA_R3",
                     "BETA_R1",
                     "BETA_R2",
+                    "BETA_R3",
                 ],
                 ["qAT_" + str(i) for i in range(len(times))],
                 ["qR1_" + str(i) for i in range(len(times))],
                 ["qR2_" + str(i) for i in range(len(times))],
+                ["qR3_" + str(i) for i in range(len(times))],
             ]
         )
 
-        obs_names = ["T1", "Q", "T_R1", "T_R2"]
+        obs_names = ["T1", "Q", "T_R1", "T_R2", "T_R3"]
 
         # process simulation output into
         ds = process_simulation_window(
@@ -349,6 +368,61 @@ def run_var_assim_experiment(
             controls_tr,
             opt_config,
             RUNTIME,
+        )
+
+        logger.debug(
+            f"    ! mean estimate of lambda: {ds.controls.sel(vari='L').mean('ens_mem').values}"
+        )
+        logger.debug(
+            f"        !! distance from truth: {ds.controls.sel(vari='L').mean('ens_mem').values - ds.controls_truth.sel(vari='L').values}"
+        )
+        logger.debug(
+            f"    ! mean estimate of gamma: {ds.controls.sel(vari='G').mean('ens_mem').values}"
+        )
+        logger.debug(
+            f"        !! distance from truth: {ds.controls.sel(vari='G').mean('ens_mem').values - ds.controls_truth.sel(vari='G').values}"
+        )
+        logger.debug(
+            f"    ! mean estimate of epsilon: {ds.controls.sel(vari='EPS').mean('ens_mem').values}"
+        )
+        logger.debug(
+            f"        !! distance from truth: {ds.controls.sel(vari='EPS').mean('ens_mem').values - ds.controls_truth.sel(vari='EPS').values}"
+        )
+        logger.debug(
+            f"    ! mean estimate of alpha r1: {ds.controls.sel(vari='ALPHA_R1').mean('ens_mem').values}"
+        )
+        logger.debug(
+            f"        !! distance from truth: {ds.controls.sel(vari='ALPHA_R1').mean('ens_mem').values - ds.controls_truth.sel(vari='ALPHA_R1').values}"
+        )
+        logger.debug(
+            f"    ! mean estimate of alpha r2: {ds.controls.sel(vari='ALPHA_R2').mean('ens_mem').values}"
+        )
+        logger.debug(
+            f"        !! distance from truth: {ds.controls.sel(vari='ALPHA_R2').mean('ens_mem').values - ds.controls_truth.sel(vari='ALPHA_R2').values}"
+        )
+        logger.debug(
+            f"    ! mean estimate of alpha r3: {ds.controls.sel(vari='ALPHA_R3').mean('ens_mem').values}"
+        )
+        logger.debug(
+            f"        !! distance from truth: {ds.controls.sel(vari='ALPHA_R3').mean('ens_mem').values - ds.controls_truth.sel(vari='ALPHA_R3').values}"
+        )
+        logger.debug(
+            f"    ! mean estimate of beta r1: {ds.controls.sel(vari='BETA_R1').mean('ens_mem').values}"
+        )
+        logger.debug(
+            f"        !! distance from truth: {ds.controls.sel(vari='BETA_R1').mean('ens_mem').values - ds.controls_truth.sel(vari='BETA_R1').values}"
+        )
+        logger.debug(
+            f"    ! mean estimate of beta r2: {ds.controls.sel(vari='BETA_R2').mean('ens_mem').values}"
+        )
+        logger.debug(
+            f"        !! distance from truth: {ds.controls.sel(vari='BETA_R2').mean('ens_mem').values - ds.controls_truth.sel(vari='BETA_R2').values}"
+        )
+        logger.debug(
+            f"    ! mean estimate of beta r3: {ds.controls.sel(vari='BETA_R3').mean('ens_mem').values}"
+        )
+        logger.debug(
+            f"        !! distance from truth: {ds.controls.sel(vari='BETA_R3').mean('ens_mem').values - ds.controls_truth.sel(vari='BETA_R3').values}"
         )
 
         results_dict[str(TMAX)] = ds

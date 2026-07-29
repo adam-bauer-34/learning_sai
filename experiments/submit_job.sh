@@ -13,6 +13,7 @@ ECS=3.0
 DEG_P_DEC=0.1
 N_YRS_RAMP=50
 N_ENS=500
+TIME="2:00:00"
 REG_NOISE=false
 
 # --------------------------------
@@ -29,10 +30,22 @@ while [[ $# -gt 0 ]]; do
         --deg_p_dec)    DEG_P_DEC="$2";    shift 2 ;;
         --n_yrs_ramp)   N_YRS_RAMP="$2";   shift 2 ;;
         --n_ens)        N_ENS="$2";        shift 2 ;;
+        --time)         TIME="$2";         shift 2 ;;
         --reg_noise)    REG_NOISE=true;    shift ;;
         *) echo "Unknown argument: $1" >&2; exit 1 ;;
     esac
 done
+
+# --------------------------------
+# Resource allocation (model-dependent)
+# --------------------------------
+CPUS_PER_TASK=16   # default, matches runner.sbatch fallback
+MEM="80G"          # default, matches runner.sbatch fallback
+
+if [[ "$MODEL" == "pco2geowc3_reg" ]]; then
+    CPUS_PER_TASK=40
+    MEM="100G"
+fi
 
 # --------------------------------
 # Build optional flags string
@@ -49,9 +62,12 @@ mkdir -p logs
 # --------------------------------
 # Submit
 # --------------------------------
-echo "Submitting job: $JOB_NAME"
+echo "Submitting job: $JOB_NAME (cpus-per-task=$CPUS_PER_TASK, mem=$MEM)"
 
 sbatch \
+    --time="$TIME" \
+    --cpus-per-task="$CPUS_PER_TASK" \
+    --mem="$MEM" \
     --job-name="$JOB_NAME" \
     --output="logs/${JOB_NAME}_%A_%a.out" \
     --error="logs/${JOB_NAME}_%A_%a.err" \
@@ -65,4 +81,5 @@ sbatch \
         --deg_p_dec    "$DEG_P_DEC"   \
         --n_yrs_ramp   "$N_YRS_RAMP"  \
         --n_ens        "$N_ENS"       \
-        $OPTIONAL_FLAGS               
+        --time         "$TIME"        \
+        $OPTIONAL_FLAGS
