@@ -108,11 +108,15 @@ def run_var_assim_experiment(
         r2_rng = np.random.default_rng(seed=REG2_NOISE_SEED)
 
         # regions (in this case, 2)
+        # NOTE: this is the covariance the truth is drawn from, so it must not be
+        # inverted. it used to pass inv=True, which turned std 0.35 K into
+        # 1 / 0.35 = 2.86 K -- an order of magnitude more regional variability
+        # than intended, and far outside the +/-1.2 bounds the optimizer is given
+        # for model errors. pco2geowc3_reg already gets this right.
         R1_mod_error_covar, R2_mod_error_covar = [
             get_covar_white(
                 np.array([INT_T_REGx_STD] * N_timesteps),
                 N_timesteps,
-                inv=True,
             )
             for INT_T_REGx_STD in Noise.INT_T_REG_STD
         ]
