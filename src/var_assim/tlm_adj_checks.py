@@ -88,8 +88,8 @@ def run_component_checks(args, e, controls, TMIN, TMAX, cost_args, DT=1.0):
         get_adj_path,
         e,
         controls,
-        TMIN=2025,
-        TMAX=2100,
+        TMIN=TMIN,
+        TMAX=TMAX,
         DT=DT,
     )
 
