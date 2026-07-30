@@ -242,13 +242,13 @@ def run_var_assim_experiment(
         logger.debug(f"    ! generating prior draws took {time.time() - t0} s")
 
         logger.debug(
-            f"    ! mean of parameter prior: {np.mean(theta_prior[:, 18], axis=0)}"
+            f"    ! mean of parameter prior: {np.mean(theta_prior[:, :18], axis=0)}"
         )
         logger.debug(
-            f"    ! median of parameter prior: {np.median(theta_prior[:, 18], axis=0)}"
+            f"    ! median of parameter prior: {np.median(theta_prior[:, :18], axis=0)}"
         )
         logger.debug(
-            f"    ! std of parameter prior: {np.std(theta_prior[:, 18], axis=0)}"
+            f"    ! std of parameter prior: {np.std(theta_prior[:, :18], axis=0)}"
         )
 
         # Check on object sizes
