@@ -151,7 +151,7 @@ def make_master_datatree(
                 / (
                     f"var-assim-output_{args.scenario}_{args.model}_{args.windowing}_{args.noise_model}"
                     f"_TMIN{args.tmin}_THETA{args.theta}_ECS{args.ecs}"
-                    f"_DEGpDEC{args.deg_p_dec}_NYRSRAMP{args.n_yrs_ramp}_Nens{args.n_ens}.nc"
+                    f"_ramprate{args.sai_ramp}_DEGpDEC{args.deg_p_dec}_NYRSRAMP{args.n_yrs_ramp}_Nens{args.n_ens}.nc"
                 )
             )
 
@@ -163,7 +163,7 @@ def make_master_datatree(
                 / (
                     f"var-assim-output_{args.scenario}_{args.model}_{args.windowing}_{args.noise_model}+reg"
                     f"_TMIN{args.tmin}_THETA{args.theta}_ECS{args.ecs}"
-                    f"_DEGpDEC{args.deg_p_dec}_NYRSRAMP{args.n_yrs_ramp}_Nens{args.n_ens}.nc"
+                    f"_ramprate{args.sai_ramp}_DEGpDEC{args.deg_p_dec}_NYRSRAMP{args.n_yrs_ramp}_Nens{args.n_ens}.nc"
                 )
             )
 

@@ -87,6 +87,8 @@ def run_var_assim_experiment(
             print_level=2,
         )
 
+        logger.debug(f"SAI forcing time series: {e.forcing['geo']}")
+
         N_timesteps = len(e.conc["CO2"])
 
         # make global model errors and their covariance matrix

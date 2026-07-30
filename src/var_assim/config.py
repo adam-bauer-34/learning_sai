@@ -141,6 +141,14 @@ def parse_args():
     )
 
     parser.add_argument(
+        "--sai_ramp",
+        type=str,
+        default="linear",
+        choices=["linear", "fast", "slow"],
+        help="Rate of SAI ramp up (linear = linear, slow = cubic, fast = t^1/3)",
+    )
+
+    parser.add_argument(
         "--check_components",
         action="store_true",
         default=False,

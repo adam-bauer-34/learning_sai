@@ -35,6 +35,7 @@ N_YRS_RAMP=50
 N_ENS=500
 TIME="2:00:00"
 REG_NOISE=false
+SAI_RAMP="linear"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -49,6 +50,7 @@ while [[ $# -gt 0 ]]; do
         --n_ens)        N_ENS="$2";        shift 2 ;;
         --time)         TIME="$2";         shift 2 ;;
         --reg_noise)    REG_NOISE=true;    shift ;;
+        --sai_ramp)     SAI_RAMP="$2";     shift 2 ;;
         *) echo "Unknown argument: $1" >&2; exit 1 ;;
     esac
 done
@@ -82,6 +84,7 @@ echo " deg_p_dec       : $DEG_P_DEC"
 echo " n_yrs_ramp      : $N_YRS_RAMP"
 echo " n_ens           : $N_ENS"
 echo " reg_noise       : $REG_NOISE"
+echo " sai_ramp        : $SAI_RAMP"
 echo "======================================"
 echo ""
 
@@ -114,6 +117,7 @@ var-assim \
     \
     --deg_p_dec    "$DEG_P_DEC"   \
     --n_yrs_ramp   "$N_YRS_RAMP"  \
+    --sai_ramp     "$SAI_RAMP"    \
     \
     --n_ens        "$N_ENS"       \
     --save_output                 \
