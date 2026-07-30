@@ -25,7 +25,45 @@ GRAD_BLOCK_TOL = 1e-7
 
 # relative finite-difference step for the per-block gradient check. scaled per
 # component, since C2 ~ 100 sits in the same control vector as model errors ~0.3
-GRAD_BLOCK_FD_STEP = 1e-6
+#
+# measured on pco2geowc3_reg, worst model-error block:
+#   step    rel_err
+#   1e-4    3.8e-09
+#   1e-5    3.9e-08
+#   1e-6    4.2e-07
+# the error scales as 1/step, i.e. it is entirely cancellation error in the
+# central difference (~eps * |J| / step) rather than anything the adjoint got
+# wrong -- a real gradient error would be step-independent. the model-error
+# gradient components are small next to the cost value itself, so 1e-6 sat right
+# on the roundoff floor and left the check measuring its own noise.
+GRAD_BLOCK_FD_STEP = 1e-4
+
+# criteria for the V-shape test on the TLM and cost-gradient checks.
+#
+# a correct gradient makes both checks trace a V in log space: the error falls
+# one decade per decade of perturbation size (first-order truncation error)
+# until roundoff takes over and it climbs back up. a systematically wrong
+# gradient cannot fall below its own error, so the descending branch flattens
+# into a plateau and the V never closes. that is a structural signature, not a
+# magnitude one, which is what makes it a usable pass/fail criterion even for
+# aggregate checks that dilute the error across the whole control vector.
+#
+# reference values come from the deterministic models, which share every piece
+# of machinery with the rest of the family except the model-error columns:
+#   check          nn floor   nn argmin   misindexed-q plateau
+#   TLM              -8.03      1e-7            -3.12
+#   cost gradient    -7.10      1e-8            -4.13
+# so the floor sits ~2 decades below the tolerance and ~3 above the plateau.
+V_SHAPE_MIN_TOL = -6.0
+
+# how many consecutive decades of ~first-order convergence to require. the
+# deterministic models sustain 7; a plateau sustains 0.
+V_SHAPE_MIN_DECADES = 4
+
+# acceptable band on the change in log10(error) per decade of perturbation
+# size. exactly first order is -1.0; the band absorbs curvature near the ends
+# of the descending branch without admitting a plateau (~0) or a slope-2 run.
+V_SHAPE_SLOPE_BAND = (-1.3, -0.7)
 
 
 def _get_check_stamp():
@@ -139,7 +177,7 @@ def run_component_checks(logger, args, e, controls, TMIN, TMAX, cost_args, DT=1.
     logger.info(f"            >>> (FLAGGED) check output stamp: {stamp}")
 
     # do each check: tlm, adj, and cost function gradient
-    _do_tlm_check(
+    tlm_df = _do_tlm_check(
         args,
         get_nonlin_path,
         get_tlm_path,
@@ -166,9 +204,16 @@ def run_component_checks(logger, args, e, controls, TMIN, TMAX, cost_args, DT=1.
         check_dir=check_dir,
     )
 
-    _do_grad_cost_check(
+    cost_grad_df = _do_grad_cost_check(
         args, cost, grad, controls * 1.1, cost_args, ALPHA_MIN, ALPHA_MAX, check_dir
     )
+
+    # V-shape test on the two checks above. both already sweep the perturbation
+    # size across sixteen decades and store log10 of the error, so the shape of
+    # that sweep is available for free -- it just was not being read. a plateau
+    # rather than a V localises the failure to the gradient itself rather than
+    # to finite-difference noise, which the endpoint values alone cannot do.
+    _do_v_shape_check(logger, tlm_df, cost_grad_df, check_dir)
 
     # per-block gradient check. this is separate from _do_grad_cost_check
     # because that check contracts the gradient into a single scalar along the
@@ -279,6 +324,8 @@ def _do_tlm_check(
     datapath = check_dir / "tlm_check.csv"
 
     df.to_csv(datapath, sep=",", index=False)
+
+    return df
 
 
 def _do_adj_id_check(
@@ -456,6 +503,133 @@ def _do_grad_cost_check(
     datapath = check_dir / "cost_grad_check.csv"
 
     df.to_csv(datapath, sep=",", index=False)
+
+    return df
+
+
+def _do_v_shape_check(logger, tlm_df, cost_grad_df, check_dir):
+    """Test that the TLM and cost-gradient checks trace a V in log space.
+
+    Both checks sweep the perturbation size alpha across many decades and record
+    log10 of a first-order convergence error. Read as a single number the sweep
+    is nearly uninformative -- the value at any one alpha depends on where that
+    alpha happens to sit relative to the roundoff floor. Read as a shape it is
+    decisive:
+
+        correct gradient -> error falls one decade per decade of alpha until
+                            roundoff dominates, then climbs. a V.
+        wrong gradient   -> error falls until it reaches the gradient's own
+                            error and then flattens. an L.
+
+    A plateau cannot be mistaken for finite-difference noise, and its height is
+    the size of the error, so this both detects and quantifies.
+
+    Three conditions are required, all of which the deterministic models meet
+    comfortably (see V_SHAPE_MIN_TOL for their reference values):
+
+        1. the minimum is interior, i.e. the sweep actually turned back up
+        2. the minimum reaches below V_SHAPE_MIN_TOL
+        3. at least V_SHAPE_MIN_DECADES consecutive decades converge at
+           first order, per V_SHAPE_SLOPE_BAND
+
+    Parameters
+    ----------
+    logger: logging.Logger
+        logger for the current experiment
+
+    tlm_df: pandas.DataFrame
+        output of _do_tlm_check
+
+    cost_grad_df: pandas.DataFrame
+        output of _do_grad_cost_check
+
+    check_dir: Path
+        stamped directory to write this check's .csv into
+    """
+
+    curves = [
+        ("tlm", tlm_df, "log(|norms - 1|)"),
+        ("cost_grad", cost_grad_df, "log(phi - 1)"),
+    ]
+
+    lo_slope, hi_slope = V_SHAPE_SLOPE_BAND
+
+    rows = []
+    for name, df, y_col in curves:
+        alphas = np.asarray(df["perturbation_size"], dtype=float)
+        y = np.asarray(df[y_col], dtype=float)
+
+        # both sweeps run from the largest alpha down, so a step from row i to
+        # row i+1 is one decade smaller in alpha and delta is the change in
+        # log10(error) over that decade. first order means delta ~ -1.
+        delta = np.diff(y)
+        in_band = (delta >= lo_slope) & (delta <= hi_slope)
+
+        # longest run of consecutive first-order decades
+        run = best_run = 0
+        for ok in in_band:
+            run = run + 1 if ok else 0
+            best_run = max(best_run, run)
+
+        i_min = int(np.nanargmin(y))
+        interior = bool(0 < i_min < len(y) - 1)
+        y_min = float(y[i_min])
+
+        passed = bool(
+            interior and y_min < V_SHAPE_MIN_TOL and best_run >= V_SHAPE_MIN_DECADES
+        )
+
+        rows.append(
+            {
+                "check": name,
+                "y_min": y_min,
+                "log10_alpha_at_min": float(np.log10(alphas[i_min])),
+                "interior_min": interior,
+                "n_decades_first_order": best_run,
+                "min_tol": V_SHAPE_MIN_TOL,
+                "min_decades": V_SHAPE_MIN_DECADES,
+                "pass": passed,
+            }
+        )
+
+        # a failure is worth distinguishing: a plateau (no first-order run, or a
+        # shallow minimum) is a wrong gradient, whereas a V that simply does not
+        # reach the tolerance is a poorly conditioned sweep
+        if passed:
+            reason = "V"
+        elif best_run < V_SHAPE_MIN_DECADES:
+            reason = f"PLATEAU (only {best_run} first-order decade(s))"
+        elif not interior:
+            reason = "no interior minimum"
+        else:
+            reason = f"minimum {y_min:.2f} above tol {V_SHAPE_MIN_TOL:.1f}"
+
+        logger.info(
+            f"            >>> (FLAGGED) V-shape {name:9s} "
+            f"min = {y_min:6.2f} at alpha = 1e{np.log10(alphas[i_min]):.0f}  "
+            f"first-order decades = {best_run:2d}  "
+            f"{'pass' if passed else 'FAIL'}: {reason}"
+        )
+
+    df_out = pd.DataFrame(rows)
+
+    n_failed = int((~df_out["pass"]).sum())
+    if n_failed:
+        logger.warning(
+            f"            >>> (FLAGGED) V-shape check FAILED for "
+            f"{n_failed}/{len(df_out)} curves "
+            f"({', '.join(df_out.loc[~df_out['pass'], 'check'])})"
+        )
+    else:
+        logger.info(
+            f"            >>> (FLAGGED) V-shape check passed for all "
+            f"{len(df_out)} curves"
+        )
+
+    # save to csv file
+    datapath = check_dir / "v_shape_check.csv"
+
+    df_out.to_csv(datapath, sep=",", index=False)
 
 
 def _do_grad_block_check(

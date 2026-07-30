@@ -57,8 +57,7 @@ def get_nonlin_path(e, theta, TMIN, TMAX, DT):
             + BETA_R2 * e.emis['geo'][t]
 
     # make stationary paths for parameters and model errors
-    paths[5:] = np.array([
-        [theta[5+i]] * len(times) for i in range(len(theta) - 5)])
+    paths[5:] = theta[5:, None]
 
     # return paths and times
     return paths, times
@@ -117,6 +116,13 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     T1, T2, Q, TR1, TR2, L, G, EPS, C1, C2, F1_CO2, ALPHA_R1, ALPHA_R2, BETA_R1, BETA_R2 = nl_path[:15, t]
     mod_error = nl_path[15:, t]
 
+    # this TLM maps the state at index t -> t+1 (get_tlm_path calls this with
+    # t-1), and get_nonlin_path applies q[t+1] in that update. the model-error
+    # columns must therefore be indexed at t+1, not t -- every other
+    # time-dependent term in the rows below already uses t+1, e.g.
+    # e.emis["geo"][t + 1] and mod_error[t + 1].
+    tq = t + 1
+
     # initialize empty TLM
     TLM_matrix = np.zeros((np.shape(nl_path)[0],
                            np.shape(nl_path)[0]))
@@ -144,7 +150,7 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[0, 12] = 0.0
     TLM_matrix[0, 13] = 0.0
     TLM_matrix[0, 14] = 0.0
-    TLM_matrix[0, 15 + t] = DT / C1 # this bit is for model errors
+    TLM_matrix[0, 15 + tq] = DT / C1 # this bit is for model errors
 
     # second row
     # this one is a bit simpler, as there is no forcing term in it
@@ -163,7 +169,7 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[1, 12] = 0.0
     TLM_matrix[1, 13] = 0.0
     TLM_matrix[1, 14] = 0.0
-    TLM_matrix[1, 15 + t] = 0.0
+    TLM_matrix[1, 15 + tq] = 0.0
 
     # third row
     # for ocean heat content
@@ -182,7 +188,7 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[2, 12] = 0.0
     TLM_matrix[2, 13] = 0.0
     TLM_matrix[2, 14] = 0.0
-    TLM_matrix[2, 15 + t] = DT
+    TLM_matrix[2, 15 + tq] = DT
 
     # fourth row
     # this is complicated because of the T1_t+1 dependence, so forcing will be included
@@ -206,7 +212,7 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[3, 12] = 0.
     TLM_matrix[3, 13] = e.emis['geo'][t+1]
     TLM_matrix[3, 14] = 0.
-    TLM_matrix[3, 15 + t] = DT * ALPHA_R1 / C1  # this bit is for model errors
+    TLM_matrix[3, 15 + tq] = DT * ALPHA_R1 / C1  # this bit is for model errors
 
     # fifth row
     # regional temperature 2
@@ -229,7 +235,7 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     ) / C1
     TLM_matrix[4, 13] = 0.
     TLM_matrix[4, 14] = e.emis['geo'][t+1]
-    TLM_matrix[4, 15 + t] = DT * ALPHA_R2 / C1  # this bit is for model errors
+    TLM_matrix[4, 15 + tq] = DT * ALPHA_R2 / C1  # this bit is for model errors
 
     # all the parameters are just the identity
     TLM_matrix[5:, 5:] = np.identity(len(nl_path[5:, t]))

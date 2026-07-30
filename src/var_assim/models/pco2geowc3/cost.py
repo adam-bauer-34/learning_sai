@@ -134,7 +134,18 @@ def grad(control, args):
 
     # initial values of adjoint are desired gradients of the observations-bit
     # of the cost function
-    obs_piece = adj_p[:, 0]
+    obs_piece = adj_p[:, 0].copy()
+
+    # chain rule through the initial condition. get_nonlin_path does not set the
+    # initial state to the control vector verbatim -- it sets
+    # paths[0, 0] = T10 + q_AT[0]. so q_AT[0] reaches the cost function by two
+    # routes, and dJ/dq_AT[0] picks up dJ/dx0[0] on top of its own stationary
+    # row. no TLM step maps into time index 0 (the TLM built at local time t
+    # writes column q[t + 1], so t + 1 >= 1 always), which is why that term is
+    # missing from the adjoint and has to be added here.
+    N_times = nl_path.shape[1]
+    for blk, ic in enumerate((0,)):
+        obs_piece[18 + blk * N_times] += obs_piece[ic]
 
     # gradient is the sum of init_piece and obs_piece
     grad = init_piece + obs_piece

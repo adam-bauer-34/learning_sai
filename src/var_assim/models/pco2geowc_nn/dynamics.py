@@ -64,7 +64,7 @@ def get_nonlin_path(e, theta, TMIN, TMAX, DT):
         paths[4, t] = ALPHA_R2 * paths[0, t] + BETA_R2 * e.emis["geo"][t]
 
     # make stationary paths for parameters and model errors
-    paths[5:] = np.array([[theta[5 + i]] * len(times) for i in range(len(theta) - 5)])
+    paths[5:] = theta[5:, None]
 
     # return paths and times
     return paths, times

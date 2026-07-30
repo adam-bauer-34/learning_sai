@@ -189,6 +189,13 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
 
     q_AT, q_R1, q_R2, q_R3 = (Qs[i * N_times : (i + 1) * N_times] for i in range(4))
 
+    # this TLM maps the state at index t -> t+1 (get_tlm_path calls this with
+    # t-1), and get_nonlin_path applies q[t+1] in that update. the model-error
+    # columns must therefore be indexed at t+1, not t -- every other
+    # time-dependent term in the rows below already uses t+1, e.g.
+    # e.emis["geo"][t + 1] and q_AT[t + 1].
+    tq = t + 1
+
     # initialize empty TLM
     TLM_matrix = np.zeros((np.shape(nl_path)[0], np.shape(nl_path)[0]))
 
@@ -218,7 +225,7 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[0, 15] = 0.0
     TLM_matrix[0, 16] = 0.0
     TLM_matrix[0, 17] = 0.0
-    TLM_matrix[0, 18 + t] = DT / C1  # this bit is for model errors
+    TLM_matrix[0, 18 + tq] = DT / C1  # this bit is for model errors
 
     # second row
     # this one is a bit simpler, as there is no forcing term in it
@@ -240,7 +247,7 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[1, 15] = 0.0
     TLM_matrix[1, 16] = 0.0
     TLM_matrix[1, 17] = 0.0
-    TLM_matrix[1, 18 + t] = 0.0
+    TLM_matrix[1, 18 + tq] = 0.0
 
     # third row
     # for ocean heat content
@@ -262,7 +269,7 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[2, 15] = 0.0
     TLM_matrix[2, 16] = 0.0
     TLM_matrix[2, 17] = 0.0
-    TLM_matrix[2, 18 + t] = DT
+    TLM_matrix[2, 18 + tq] = DT
 
     # fourth row
     # this is complicated because of the T1_t+1 dependence, so forcing will be included
@@ -289,8 +296,8 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[3, 15] = e.emis["geo"][t + 1]
     TLM_matrix[3, 16] = 0.0
     TLM_matrix[3, 17] = 0.0
-    TLM_matrix[3, 18 + t] = DT * ALPHA_R1 / C1  # this bit is for model errors
-    TLM_matrix[3, 18 + N_times + t] = 1.0  # regional model errors for R1
+    TLM_matrix[3, 18 + tq] = DT * ALPHA_R1 / C1  # this bit is for model errors
+    TLM_matrix[3, 18 + N_times + tq] = 1.0  # regional model errors for R1
 
     # fifth row
     # regional temperature 2
@@ -316,8 +323,8 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[4, 15] = 0.0
     TLM_matrix[4, 16] = e.emis["geo"][t + 1]
     TLM_matrix[4, 17] = 0.0
-    TLM_matrix[4, 18 + t] = DT * ALPHA_R2 / C1  # this bit is for model errors
-    TLM_matrix[4, 18 + 2 * N_times + t] = 1.0  # regional model errors for R2
+    TLM_matrix[4, 18 + tq] = DT * ALPHA_R2 / C1  # this bit is for model errors
+    TLM_matrix[4, 18 + 2 * N_times + tq] = 1.0  # regional model errors for R2
 
     # sixth row
     # regional temperature 3
@@ -343,8 +350,8 @@ def get_TLM_matrix(e, t, nl_path, DT, CHECK_TLM=False):
     TLM_matrix[5, 15] = 0.0
     TLM_matrix[5, 16] = 0.0
     TLM_matrix[5, 17] = e.emis["geo"][t + 1]
-    TLM_matrix[5, 18 + t] = DT * ALPHA_R3 / C1  # this bit is for model errors
-    TLM_matrix[5, 18 + 3 * N_times + t] = 1.0  # regional model errors for R3
+    TLM_matrix[5, 18 + tq] = DT * ALPHA_R3 / C1  # this bit is for model errors
+    TLM_matrix[5, 18 + 3 * N_times + tq] = 1.0  # regional model errors for R3
 
     # all the parameters are just the identity
     unity_inds = np.arange(6, TLM_matrix.shape[0])
