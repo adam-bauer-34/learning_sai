@@ -46,6 +46,7 @@ class EmissionsBaseline:
 
         self.logger = logger
         self.scenario = args.scenario
+        self.sai_ramp = args.sai_ramp
 
         self.t_min = int(t_min)
         self.t_max = int(t_max)
@@ -274,15 +275,28 @@ class EmissionsBaseline:
         # add sulfur emissions from geoengineering
         # times where geoengineering is ramped up
         geo_ramp_up_times = self.times_ext[
-            (self.times_ext >= self.T_START) & (self.times_ext < self.T_END)
+            (self.times_ext >= self.T_START) & (self.times_ext <= self.T_END)
         ]
         # times where SAI is held constant
-        geo_constant_times = self.times_ext[self.times_ext >= self.T_END]
+        geo_constant_times = self.times_ext[self.times_ext > self.T_END]
 
         # make SAI ramp up
-        geo_ramp = (
-            self.TOTAL_TEMP_OFFSET * (self.L + self.G * self.EPS) / self.F_EFF_GEO
-        ) * ((geo_ramp_up_times - self.T_START) / (self.T_END - self.T_START))
+        if self.sai_ramp == "linear":
+            geo_ramp = (
+                self.TOTAL_TEMP_OFFSET * (self.L + self.G * self.EPS) / self.F_EFF_GEO
+            ) * ((geo_ramp_up_times - self.T_START) / (self.T_END - self.T_START))
+
+        elif self.sai_ramp == "fast":
+            geo_ramp = (
+                self.TOTAL_TEMP_OFFSET * (self.L + self.G * self.EPS) / self.F_EFF_GEO
+            ) * ((geo_ramp_up_times - self.T_START) / (self.T_END - self.T_START)) ** (
+                1 / 3
+            )
+
+        elif self.sai_ramp == "slow":
+            geo_ramp = (
+                self.TOTAL_TEMP_OFFSET * (self.L + self.G * self.EPS) / self.F_EFF_GEO
+            ) * ((geo_ramp_up_times - self.T_START) / (self.T_END - self.T_START)) ** 3
 
         # set remaining years of SAI to final t levels
         geo_constant = np.ones(len(geo_constant_times), dtype=float) * geo_ramp[-1]
@@ -294,21 +308,20 @@ class EmissionsBaseline:
 
 
 if __name__ == "__main__":
-    # small test script to verify geoengineering forcing is being generated
-    # correctly
-    import sys
-    from var_assim.config import parse_args
-    from var_assim.logging_utils import setup_logger
-
+    import argparse
     import matplotlib.pyplot as plt
+
+    from var_assim.logging_utils import setup_logger
     from var_assim.config import FIGS_DIR
 
-    args = parse_args()
     log = setup_logger()
 
-    t_max = 2100
-    geo = True
-    degs_per_dec = [0.0, 0.5]
+    SAI_RAMPS = ["linear", "fast", "slow"]
+    RAMP_LABELS = {
+        "linear": "linear ($t$)",
+        "fast": "fast ($t^{1/3}$)",
+        "slow": "slow ($t^3$)",
+    }
 
     class Prior:
         def __init__(self):
@@ -323,38 +336,63 @@ if __name__ == "__main__":
     p = Prior()
     t = Truth()
 
-    ts = 2025
-    tf = 2075
-    geo_ts_emis = []
-    geo_ts_force = []
+    t_min, t_max = 2025, 2100
+    T_START, T_END = 2025, 2075
 
-    for deg in degs_per_dec:
+    # --- checks ---
+    forcings = {}
+    for ramp in SAI_RAMPS:
+        args = argparse.Namespace(scenario="ssp245", sai_ramp=ramp, deg_p_dec=0.1)
         e = EmissionsBaseline(
-            log, args, args.tmin, t_max, geo=geo, Prior=p, Truth=t, T_START=ts, T_END=tf
+            log,
+            args,
+            t_min,
+            t_max,
+            geo=True,
+            Prior=p,
+            Truth=t,
+            T_START=T_START,
+            T_END=T_END,
         )
+        forcings[ramp] = e.forcing["geo"]
 
-        geo_ts_emis.append(e.emis["geo"])
-        geo_ts_force.append(e.forcing["geo"])
+        # forcing should be monotonically non-increasing (more negative) during ramp
+        ramp_mask = (e.times_ext >= T_START) & (e.times_ext < T_END)
+        assert np.all(
+            np.diff(e.forcing["geo"][ramp_mask]) <= 0
+        ), f"FAIL: '{ramp}' forcing is not monotonically decreasing during ramp-up"
 
-    fig, ax = plt.subplots(1, 2, figsize=(14, 6))
+        # forcing should be constant after T_END
+        plateau_mask = e.times_ext >= T_END
+        plateau_vals = e.forcing["geo"][plateau_mask]
+        assert np.allclose(
+            plateau_vals, plateau_vals[0]
+        ), f"FAIL: '{ramp}' forcing is not constant after T_END"
 
-    for i in range(len(degs_per_dec)):
-        ax[0].plot(
-            e.times_ext,
-            geo_ts_emis[i],
-            label=str(degs_per_dec[i]) + " deg C per decade",
-        )
-        ax[1].plot(
-            e.times_ext,
-            geo_ts_force[i],
-            label=str(degs_per_dec[i]) + " deg C per decade",
-        )
+        print(f"  [OK] {ramp}: plateau forcing = {plateau_vals[0]:.4f} W m⁻²")
 
-    ax[0].set_ylabel("Emissions (MtSO$_2$)")
-    ax[1].set_ylabel("Forcing (W m$^{-2}$)")
+    # --- plot ---
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
-    ax[1].legend()
+    for ramp in SAI_RAMPS:
+        axes[0].plot(e.times_ext, forcings[ramp], label=RAMP_LABELS[ramp])
 
-    figpath = FIGS_DIR / "checks/geo_emis.png"
-    fig.savefig(figpath, dpi=400)
-    print(f"Emissions baseline check figure saved to:\n {figpath}")
+        # normalized shape (0 → 1) to make ramp profile differences visible
+        f_min = forcings[ramp].min()
+        axes[1].plot(e.times_ext, forcings[ramp] / f_min, label=RAMP_LABELS[ramp])
+
+    for ax in axes:
+        ax.axvline(T_START, color="k", linestyle="--", linewidth=0.8, label="SAI start")
+        ax.axvline(T_END, color="k", linestyle=":", linewidth=0.8, label="SAI plateau")
+        ax.set_xlabel("Year")
+        ax.legend(fontsize=8)
+
+    axes[0].set_ylabel("SAI forcing (W m$^{-2}$)")
+    axes[0].set_title("Forcing by ramp type")
+    axes[1].set_ylabel("Normalized forcing (0 → 1)")
+    axes[1].set_title("Ramp shape comparison")
+
+    fig.tight_layout()
+    figpath = FIGS_DIR / "checks" / "sai_ramp_check.png"
+    fig.savefig(figpath, dpi=400, bbox_inches="tight")
+    print(f"\nSAI ramp check figure saved to:\n  {figpath}")
