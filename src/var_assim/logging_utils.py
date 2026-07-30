@@ -10,8 +10,14 @@ import sys
 import subprocess
 
 
-def get_git_hash():
-    """Get the current git hash for reproducibility."""
+def get_git_hash(short=False):
+    """Get the current git hash for reproducibility.
+
+    Parameters
+    ----------
+    short: bool
+        return the abbreviated (7 character) hash instead of the full one
+    """
     try:
         git_hash = (
             subprocess.check_output(["git", "rev-parse", "HEAD"])
@@ -20,7 +26,32 @@ def get_git_hash():
         )
     except Exception as e:
         git_hash = "unknown"
+
+    if short:
+        return git_hash[:7]
+
     return git_hash
+
+
+def is_git_dirty():
+    """Are there uncommitted changes to tracked files?
+
+    Used to stamp check output: a git hash alone doesn't identify the code that
+    ran if the working tree has been edited on top of it. Untracked files are
+    ignored, since they can't change model behaviour.
+    """
+    try:
+        status = (
+            subprocess.check_output(
+                ["git", "status", "--porcelain", "--untracked-files=no"]
+            )
+            .decode("utf-8")
+            .strip()
+        )
+    except Exception as e:
+        return False
+
+    return len(status) > 0
 
 
 def setup_logger(debug=False):

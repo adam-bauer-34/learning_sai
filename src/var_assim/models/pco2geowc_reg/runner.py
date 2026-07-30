@@ -52,9 +52,15 @@ def run_var_assim_experiment(
     Noise: object,
     Windowing: object,
 ):
-    # start dask
-    c = start_dask(logger)
-    logger.info(f"    > {c}")
+    # start dask, unless the assimilation is being skipped: the client is
+    # only touched by the optimization block, so a checks-only run has no
+    # reason to pay for cluster startup and teardown
+    if args.no_opt:
+        c = None
+        logger.info("    > Skipping dask cluster startup (--no_opt)")
+    else:
+        c = start_dask(logger)
+        logger.info(f"    > {c}")
 
     # set time discretization (always 1.0)
     DT = 1.0
@@ -191,6 +197,7 @@ def run_var_assim_experiment(
                 "        >> (FLAGGED) Checking TLM, ADJ, and cost function gradient accuracy"
             )
             run_component_checks(
+                logger,
                 args,
                 e,
                 controls_tr,
@@ -214,6 +221,17 @@ def run_var_assim_experiment(
             logger.info(
                 f"        >> (FLAGGED) .csv files saved to {DATA_DIR}/checks/{args.model}"
             )
+
+        # if flagged, skip the optimization entirely. this has to skip per
+        # window rather than exiting after the checks, because the checks are
+        # gated on the final window and everything before it would otherwise
+        # still be assimilated.
+        if args.no_opt:
+            logger.info(
+                "        >> (FLAGGED) --no_opt set; skipping assimilation for"
+                f" window {TMIN}-{TMAX}"
+            )
+            continue
 
         # optimization parameters
         tol = opt_config["tol"]
@@ -358,4 +376,8 @@ def run_var_assim_experiment(
         logger.info(f"        >> Process for window {TMIN}-{TMAX} complete")
 
     # synthesize datasets from each window into a datatree object
-    make_master_datatree(logger, args, results_dict)
+    # (nothing to synthesize if the assimilation was skipped)
+    if results_dict:
+        make_master_datatree(logger, args, results_dict)
+    else:
+        logger.info("    > No assimilation output to save (--no_opt)")
