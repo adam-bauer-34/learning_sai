@@ -148,9 +148,14 @@ class ClimateModelPriors:
         # regional temperature vector
         if cli_args.reg_noise:
             # initial condition std adjusted to internal variability + regional variability
+            # NOTE: the second term is the regional variability, so it is
+            # INT_T_REG_STD. it used to be OBS_T_REG_STD, which is 1.0 and so
+            # widened the regional IC prior to ~1.24 K -- several times the
+            # regional variability actually present. OBS_T_REG_STD is observation
+            # noise, which is never switched on anywhere in this codebase.
             param_dict["T_REG_STD"] = (
                 np.array(param_dict["ALPHA_CEN"]) * Noise.INT_VAR_STD
-                + Noise.OBS_T_REG_STD
+                + Noise.INT_T_REG_STD
             )
 
         else:
