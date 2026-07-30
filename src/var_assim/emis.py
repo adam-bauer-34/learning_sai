@@ -311,6 +311,8 @@ if __name__ == "__main__":
     import argparse
     import matplotlib.pyplot as plt
 
+    from matplotlib.lines import Line2D
+
     from var_assim.logging_utils import setup_logger
     from var_assim.config import FIGS_DIR
 
@@ -396,3 +398,64 @@ if __name__ == "__main__":
     figpath = FIGS_DIR / "checks" / "sai_ramp_check.png"
     fig.savefig(figpath, dpi=400, bbox_inches="tight")
     print(f"\nSAI ramp check figure saved to:\n  {figpath}")
+
+    ### subsectioning ramps check
+    tmin = 2025
+    tmaxs = [2050, 2075, 2100]
+    tstart = 2025
+    tend = tstart + 50
+
+    results = {}
+    for tmax in tmaxs:
+        results[tmax] = {}
+        for ramp in SAI_RAMPS:
+            args = argparse.Namespace(scenario="ssp245", sai_ramp=ramp, deg_p_dec=0.1)
+            e = EmissionsBaseline(
+                log,
+                args,
+                tmin,
+                tmax,
+                geo=True,
+                Prior=p,
+                Truth=t,
+                T_START=tstart,
+                T_END=tend,
+            )
+
+            results[tmax][ramp] = {"times": e.times_ext, "f": e.forcing["geo"]}
+
+    fig, ax = plt.subplots(1)
+
+    cs = ["blue", "red", "black"]  # end year colors
+    lss = ["solid", "dashed", "dotted"]  # ramp styles
+    tmaxs_plot = tmaxs[::-1]
+    for ydx, tmax in enumerate(tmaxs_plot):
+        for idx, ramp in enumerate(SAI_RAMPS):
+            ax.plot(
+                results[tmax][ramp]["times"],
+                results[tmax][ramp]["f"],
+                color=cs[ydx],
+                linestyle=lss[idx],
+            )
+
+    # two-part legend: colors encode t_max, linestyles encode ramp type
+    color_handles = [
+        Line2D([], [], color=cs[ydx], linestyle="solid", label=str(tmax))
+        for ydx, tmax in enumerate(tmaxs_plot)
+    ]
+    style_handles = [
+        Line2D([], [], color="grey", linestyle=lss[idx], label=RAMP_LABELS[ramp])
+        for idx, ramp in enumerate(SAI_RAMPS)
+    ]
+
+    color_legend = ax.legend(
+        handles=color_handles, title="$t_{max}$", loc="upper right", fontsize=8
+    )
+    ax.add_artist(color_legend)
+    ax.legend(handles=style_handles, title="ramp", loc="upper center", fontsize=8)
+
+    ax.set_xlabel("Year")
+    ax.set_ylabel("SAI forcing (W m$^{-2}$)")
+    fname = FIGS_DIR / "checks" / "subsection_sai_ramp.png"
+    fig.savefig(fname, dpi=400, bbox_inches="tight")
+    print(f"Sectioning ramp check figure saved to: {fname}")
