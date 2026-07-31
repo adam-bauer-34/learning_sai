@@ -155,6 +155,18 @@ def parse_args():
         help="Check components of variational assimilation model (TLM, ADJ, grad J)?",
     )
 
+    parser.add_argument(
+        "--no_opt",
+        action="store_true",
+        default=False,
+        help=(
+            "Skip the optimization (inner and outer loops) in every window. "
+            "Use with --check_components to verify model components without "
+            "paying for an assimilation; pair with --windowing debug so there "
+            "is only one window."
+        ),
+    )
+
     # add debugging mode
     parser.add_argument(
         "--debug",
@@ -208,6 +220,12 @@ def check_config_compatability(args):
 
     if args.model == "pco2geowc3_reg" and not args.reg_noise:
         raise ValueError(f"{args.model} cannot be run without --reg_noise flag")
+
+    if args.no_opt and not args.check_components:
+        raise ValueError(
+            "--no_opt skips the assimilation, and without --check_components "
+            "nothing would be computed. Pass --check_components too."
+        )
 
 
 # quick test

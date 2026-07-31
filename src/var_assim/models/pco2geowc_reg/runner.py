@@ -52,9 +52,15 @@ def run_var_assim_experiment(
     Noise: object,
     Windowing: object,
 ):
-    # start dask
-    c = start_dask(logger)
-    logger.info(f"    > {c}")
+    # start dask, unless the assimilation is being skipped: the client is
+    # only touched by the optimization block, so a checks-only run has no
+    # reason to pay for cluster startup and teardown
+    if args.no_opt:
+        c = None
+        logger.info("    > Skipping dask cluster startup (--no_opt)")
+    else:
+        c = start_dask(logger)
+        logger.info(f"    > {c}")
 
     # set time discretization (always 1.0)
     DT = 1.0
@@ -102,11 +108,15 @@ def run_var_assim_experiment(
         r2_rng = np.random.default_rng(seed=REG2_NOISE_SEED)
 
         # regions (in this case, 2)
+        # NOTE: this is the covariance the truth is drawn from, so it must not be
+        # inverted. it used to pass inv=True, which turned std 0.35 K into
+        # 1 / 0.35 = 2.86 K -- an order of magnitude more regional variability
+        # than intended, and far outside the +/-1.2 bounds the optimizer is given
+        # for model errors. pco2geowc3_reg already gets this right.
         R1_mod_error_covar, R2_mod_error_covar = [
             get_covar_white(
                 np.array([INT_T_REGx_STD] * N_timesteps),
                 N_timesteps,
-                inv=True,
             )
             for INT_T_REGx_STD in Noise.INT_T_REG_STD
         ]
@@ -191,6 +201,7 @@ def run_var_assim_experiment(
                 "        >> (FLAGGED) Checking TLM, ADJ, and cost function gradient accuracy"
             )
             run_component_checks(
+                logger,
                 args,
                 e,
                 controls_tr,
@@ -214,6 +225,17 @@ def run_var_assim_experiment(
             logger.info(
                 f"        >> (FLAGGED) .csv files saved to {DATA_DIR}/checks/{args.model}"
             )
+
+        # if flagged, skip the optimization entirely. this has to skip per
+        # window rather than exiting after the checks, because the checks are
+        # gated on the final window and everything before it would otherwise
+        # still be assimilated.
+        if args.no_opt:
+            logger.info(
+                "        >> (FLAGGED) --no_opt set; skipping assimilation for"
+                f" window {TMIN}-{TMAX}"
+            )
+            continue
 
         # optimization parameters
         tol = opt_config["tol"]
@@ -358,4 +380,8 @@ def run_var_assim_experiment(
         logger.info(f"        >> Process for window {TMIN}-{TMAX} complete")
 
     # synthesize datasets from each window into a datatree object
-    make_master_datatree(logger, args, results_dict)
+    # (nothing to synthesize if the assimilation was skipped)
+    if results_dict:
+        make_master_datatree(logger, args, results_dict)
+    else:
+        logger.info("    > No assimilation output to save (--no_opt)")

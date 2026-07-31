@@ -5,20 +5,120 @@ University of Illinois Urbana-Champaign
 7.12.2024
 """
 
+import os
 import importlib
+
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
 
 from var_assim.config import DATA_DIR
+from var_assim.logging_utils import get_git_hash, is_git_dirty
 from pathlib import Path
 
+# tolerance for the per-block gradient check. observed values: initial
+# conditions ~1e-10, parameters ~4e-9, and a genuinely broken model-error block
+# O(0.1-1). so this leaves ~25x headroom above the noisiest passing group while
+# still sitting six orders of magnitude below anything actually wrong.
+GRAD_BLOCK_TOL = 1e-7
 
-def run_component_checks(args, e, controls, TMIN, TMAX, cost_args, DT=1.0):
+# relative finite-difference step for the per-block gradient check. scaled per
+# component, since C2 ~ 100 sits in the same control vector as model errors ~0.3
+#
+# measured on pco2geowc3_reg, worst model-error block:
+#   step    rel_err
+#   1e-4    3.8e-09
+#   1e-5    3.9e-08
+#   1e-6    4.2e-07
+# the error scales as 1/step, i.e. it is entirely cancellation error in the
+# central difference (~eps * |J| / step) rather than anything the adjoint got
+# wrong -- a real gradient error would be step-independent. the model-error
+# gradient components are small next to the cost value itself, so 1e-6 sat right
+# on the roundoff floor and left the check measuring its own noise.
+GRAD_BLOCK_FD_STEP = 1e-4
+
+# criteria for the V-shape test on the TLM and cost-gradient checks.
+#
+# a correct gradient makes both checks trace a V in log space: the error falls
+# one decade per decade of perturbation size (first-order truncation error)
+# until roundoff takes over and it climbs back up. a systematically wrong
+# gradient cannot fall below its own error, so the descending branch flattens
+# into a plateau and the V never closes. that is a structural signature, not a
+# magnitude one, which is what makes it a usable pass/fail criterion even for
+# aggregate checks that dilute the error across the whole control vector.
+#
+# reference values come from the deterministic models, which share every piece
+# of machinery with the rest of the family except the model-error columns:
+#   check          nn floor   nn argmin   misindexed-q plateau
+#   TLM              -8.03      1e-7            -3.12
+#   cost gradient    -7.10      1e-8            -4.13
+# so the floor sits ~2 decades below the tolerance and ~3 above the plateau.
+V_SHAPE_MIN_TOL = -6.0
+
+# how many consecutive decades of ~first-order convergence to require. the
+# deterministic models sustain 7; a plateau sustains 0.
+V_SHAPE_MIN_DECADES = 4
+
+# acceptable band on the change in log10(error) per decade of perturbation
+# size. exactly first order is -1.0; the band absorbs curvature near the ends
+# of the descending branch without admitting a plateau (~0) or a slope-2 run.
+V_SHAPE_SLOPE_BAND = (-1.3, -0.7)
+
+
+def _get_check_stamp():
+    """Build a provenance stamp identifying the code that produced a check.
+
+    A bare timestamp records *when* a check ran, not *what code* ran, which is
+    what you need when comparing a check before and after a fix. The git hash
+    is the actual identifier; the "-dirty" suffix flags uncommitted edits on
+    top of it, and the timestamp only orders repeat runs of the same code.
+    """
+
+    dirty = "-dirty" if is_git_dirty() else ""
+    timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+
+    return f"{get_git_hash(short=True)}{dirty}_{timestamp}"
+
+
+def _write_run_metadata(args, check_dir, stamp, TMIN, TMAX, DT, N_times, n_controls):
+    """Record provenance for every check in this directory.
+
+    Written once per check run rather than as columns on each check's .csv, so
+    the existing checks' output format is untouched.
+    """
+
+    meta = {
+        "stamp": stamp,
+        "model": args.model,
+        "git_sha": get_git_hash(),
+        "git_dirty": is_git_dirty(),
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
+        "slurm_job_id": os.environ.get("SLURM_JOB_ID", "local"),
+        "scenario": args.scenario,
+        "noise_model": args.noise_model,
+        "reg_noise": args.reg_noise,
+        "windowing": args.windowing,
+        "theta": args.theta,
+        "ecs": args.ecs,
+        "TMIN": TMIN,
+        "TMAX": TMAX,
+        "DT": DT,
+        "N_times": N_times,
+        "n_controls": n_controls,
+    }
+
+    pd.DataFrame([meta]).to_csv(check_dir / "run_metadata.csv", sep=",", index=False)
+
+
+def run_component_checks(logger, args, e, controls, TMIN, TMAX, cost_args, DT=1.0):
     """Check components of variational data assimilation.
 
     Parameters
     ----------
+    logger: logging.Logger
+        logger for the current experiment
+
     args: argparse.Namespace
         namespace for current simulation
 
@@ -63,12 +163,21 @@ def run_component_checks(args, e, controls, TMIN, TMAX, cost_args, DT=1.0):
     ALPHA_MIN = 1e-16
     ALPHA_MAX = 1.0
 
-    # check to see if parent directory for data saving exists; if it doesn't, make it
-    check_dir = DATA_DIR / "checks" / args.model
+    # stamp the output directory with the code that produced it, so a check run
+    # before a fix and one after are both kept and can be told apart
+    stamp = _get_check_stamp()
+    check_dir = DATA_DIR / "checks" / args.model / stamp
     check_dir.mkdir(parents=True, exist_ok=True)
 
+    # number of timesteps, derived exactly as get_nonlin_path derives it
+    N_times = len(np.arange(TMIN, TMAX + DT, DT))
+
+    _write_run_metadata(args, check_dir, stamp, TMIN, TMAX, DT, N_times, len(controls))
+
+    logger.info(f"            >>> (FLAGGED) check output stamp: {stamp}")
+
     # do each check: tlm, adj, and cost function gradient
-    _do_tlm_check(
+    tlm_df = _do_tlm_check(
         args,
         get_nonlin_path,
         get_tlm_path,
@@ -79,6 +188,7 @@ def run_component_checks(args, e, controls, TMIN, TMAX, cost_args, DT=1.0):
         DT,
         ALPHA_MIN,
         ALPHA_MAX,
+        check_dir,
     )
 
     _do_adj_id_check(
@@ -88,13 +198,30 @@ def run_component_checks(args, e, controls, TMIN, TMAX, cost_args, DT=1.0):
         get_adj_path,
         e,
         controls,
-        TMIN=2025,
-        TMAX=2100,
+        TMIN=TMIN,
+        TMAX=TMAX,
         DT=DT,
+        check_dir=check_dir,
     )
 
-    _do_grad_cost_check(
-        args, cost, grad, controls * 1.1, cost_args, ALPHA_MIN, ALPHA_MAX
+    cost_grad_df = _do_grad_cost_check(
+        args, cost, grad, controls * 1.1, cost_args, ALPHA_MIN, ALPHA_MAX, check_dir
+    )
+
+    # V-shape test on the two checks above. both already sweep the perturbation
+    # size across sixteen decades and store log10 of the error, so the shape of
+    # that sweep is available for free -- it just was not being read. a plateau
+    # rather than a V localises the failure to the gradient itself rather than
+    # to finite-difference noise, which the endpoint values alone cannot do.
+    _do_v_shape_check(logger, tlm_df, cost_grad_df, check_dir)
+
+    # per-block gradient check. this is separate from _do_grad_cost_check
+    # because that check contracts the gradient into a single scalar along the
+    # full normalised gradient direction, where the parameter block dominates
+    # and a badly wrong model-error block barely registers. reported per block,
+    # the same defect is orders of magnitude more visible.
+    _do_grad_block_check(
+        logger, args, cost, grad, controls * 1.1, cost_args, check_dir, N_times
     )
 
 
@@ -109,6 +236,7 @@ def _do_tlm_check(
     DT,
     ALPHA_MIN,
     ALPHA_MAX,
+    check_dir,
 ):
     """Tangent linear model check.
 
@@ -149,6 +277,9 @@ def _do_tlm_check(
 
     ALPHA_MAX: float
         maximum perturbation size
+
+    check_dir: Path
+        stamped directory to write this check's .csv into
     """
 
     if ALPHA_MIN > ALPHA_MAX:
@@ -190,13 +321,24 @@ def _do_tlm_check(
     df = pd.DataFrame(data)
 
     # save output to csv
-    datapath = DATA_DIR / "checks" / args.model / "tlm_check.csv"
+    datapath = check_dir / "tlm_check.csv"
 
     df.to_csv(datapath, sep=",", index=False)
 
+    return df
+
 
 def _do_adj_id_check(
-    args, get_nonlin_path, get_tlm_path, get_adj_path, e, controls, TMIN, TMAX, DT
+    args,
+    get_nonlin_path,
+    get_tlm_path,
+    get_adj_path,
+    e,
+    controls,
+    TMIN,
+    TMAX,
+    DT,
+    check_dir,
 ):
     """Adjoint identity check.
 
@@ -228,6 +370,9 @@ def _do_adj_id_check(
 
     DT: float
         time discretization
+
+    check_dir: Path
+        stamped directory to write this check's .csv into
     """
 
     # make empty identity list
@@ -273,12 +418,14 @@ def _do_adj_id_check(
     df = pd.DataFrame(data)
 
     # save output to csv
-    datapath = DATA_DIR / "checks" / args.model / "adj_id_check.csv"
+    datapath = check_dir / "adj_id_check.csv"
 
     df.to_csv(datapath, sep=",", index=False)
 
 
-def _do_grad_cost_check(args, cost, grad, control, cost_args, ALPHA_MIN, ALPHA_MAX):
+def _do_grad_cost_check(
+    args, cost, grad, control, cost_args, ALPHA_MIN, ALPHA_MAX, check_dir
+):
     """Cost gradient check function.
 
     Parameters
@@ -303,6 +450,9 @@ def _do_grad_cost_check(args, cost, grad, control, cost_args, ALPHA_MIN, ALPHA_M
 
     ALPHA_MAX: float
         maximum perturbation size
+
+    check_dir: Path
+        stamped directory to write this check's .csv into
     """
 
     if ALPHA_MIN > ALPHA_MAX:
@@ -350,6 +500,319 @@ def _do_grad_cost_check(args, cost, grad, control, cost_args, ALPHA_MIN, ALPHA_M
     df = pd.DataFrame(data)
 
     # save to csv file
-    datapath = DATA_DIR / "checks" / args.model / "cost_grad_check.csv"
+    datapath = check_dir / "cost_grad_check.csv"
+
+    df.to_csv(datapath, sep=",", index=False)
+
+    return df
+
+
+def _do_v_shape_check(logger, tlm_df, cost_grad_df, check_dir):
+    """Test that the TLM and cost-gradient checks trace a V in log space.
+
+    Both checks sweep the perturbation size alpha across many decades and record
+    log10 of a first-order convergence error. Read as a single number the sweep
+    is nearly uninformative -- the value at any one alpha depends on where that
+    alpha happens to sit relative to the roundoff floor. Read as a shape it is
+    decisive:
+
+        correct gradient -> error falls one decade per decade of alpha until
+                            roundoff dominates, then climbs. a V.
+        wrong gradient   -> error falls until it reaches the gradient's own
+                            error and then flattens. an L.
+
+    A plateau cannot be mistaken for finite-difference noise, and its height is
+    the size of the error, so this both detects and quantifies.
+
+    Three conditions are required, all of which the deterministic models meet
+    comfortably (see V_SHAPE_MIN_TOL for their reference values):
+
+        1. the minimum is interior, i.e. the sweep actually turned back up
+        2. the minimum reaches below V_SHAPE_MIN_TOL
+        3. at least V_SHAPE_MIN_DECADES consecutive decades converge at
+           first order, per V_SHAPE_SLOPE_BAND
+
+    Parameters
+    ----------
+    logger: logging.Logger
+        logger for the current experiment
+
+    tlm_df: pandas.DataFrame
+        output of _do_tlm_check
+
+    cost_grad_df: pandas.DataFrame
+        output of _do_grad_cost_check
+
+    check_dir: Path
+        stamped directory to write this check's .csv into
+    """
+
+    curves = [
+        ("tlm", tlm_df, "log(|norms - 1|)"),
+        ("cost_grad", cost_grad_df, "log(phi - 1)"),
+    ]
+
+    lo_slope, hi_slope = V_SHAPE_SLOPE_BAND
+
+    rows = []
+    for name, df, y_col in curves:
+        alphas = np.asarray(df["perturbation_size"], dtype=float)
+        y = np.asarray(df[y_col], dtype=float)
+
+        # both sweeps run from the largest alpha down, so a step from row i to
+        # row i+1 is one decade smaller in alpha and delta is the change in
+        # log10(error) over that decade. first order means delta ~ -1.
+        delta = np.diff(y)
+        in_band = (delta >= lo_slope) & (delta <= hi_slope)
+
+        # longest run of consecutive first-order decades
+        run = best_run = 0
+        for ok in in_band:
+            run = run + 1 if ok else 0
+            best_run = max(best_run, run)
+
+        i_min = int(np.nanargmin(y))
+        interior = bool(0 < i_min < len(y) - 1)
+        y_min = float(y[i_min])
+
+        passed = bool(
+            interior and y_min < V_SHAPE_MIN_TOL and best_run >= V_SHAPE_MIN_DECADES
+        )
+
+        rows.append(
+            {
+                "check": name,
+                "y_min": y_min,
+                "log10_alpha_at_min": float(np.log10(alphas[i_min])),
+                "interior_min": interior,
+                "n_decades_first_order": best_run,
+                "min_tol": V_SHAPE_MIN_TOL,
+                "min_decades": V_SHAPE_MIN_DECADES,
+                "pass": passed,
+            }
+        )
+
+        # a failure is worth distinguishing: a plateau (no first-order run, or a
+        # shallow minimum) is a wrong gradient, whereas a V that simply does not
+        # reach the tolerance is a poorly conditioned sweep
+        if passed:
+            reason = "V"
+        elif best_run < V_SHAPE_MIN_DECADES:
+            reason = f"PLATEAU (only {best_run} first-order decade(s))"
+        elif not interior:
+            reason = "no interior minimum"
+        else:
+            reason = f"minimum {y_min:.2f} above tol {V_SHAPE_MIN_TOL:.1f}"
+
+        logger.info(
+            f"            >>> (FLAGGED) V-shape {name:9s} "
+            f"min = {y_min:6.2f} at alpha = 1e{np.log10(alphas[i_min]):.0f}  "
+            f"first-order decades = {best_run:2d}  "
+            f"{'pass' if passed else 'FAIL'}: {reason}"
+        )
+
+    df_out = pd.DataFrame(rows)
+
+    n_failed = int((~df_out["pass"]).sum())
+    if n_failed:
+        logger.warning(
+            f"            >>> (FLAGGED) V-shape check FAILED for "
+            f"{n_failed}/{len(df_out)} curves "
+            f"({', '.join(df_out.loc[~df_out['pass'], 'check'])})"
+        )
+    else:
+        logger.info(
+            f"            >>> (FLAGGED) V-shape check passed for all "
+            f"{len(df_out)} curves"
+        )
+
+    # save to csv file
+    datapath = check_dir / "v_shape_check.csv"
+
+    df_out.to_csv(datapath, sep=",", index=False)
+
+
+def _do_grad_block_check(
+    logger, args, cost, grad, control, cost_args, check_dir, N_times
+):
+    """Per-block check of the adjoint gradient against finite differences.
+
+    The control vector splits into initial conditions, parameters, and one
+    block of model errors per noise stream, and each group is checked
+    independently. This matters because _do_grad_cost_check reduces the
+    gradient to one scalar along the full normalised gradient direction: the
+    parameter block dominates that norm, so a model-error block can be O(1)
+    wrong while the scalar check still reads within ~1e-4 of unity, which is
+    indistinguishable from second-order finite-difference error.
+
+    Two errors are reported per block:
+        - rel_err: the full gradient, which is the pass/fail criterion
+        - rel_err_obs_only: the prior term (analytic, and independent of the
+          adjoint) subtracted from both sides, isolating the piece the adjoint
+          actually computes. Diagnostic only -- it makes a failure interpretable
+          rather than just visible.
+
+    Parameters
+    ----------
+    logger: logging.Logger
+        logger for the current experiment
+
+    args: argparse.Namespace
+        CLI input for simulations
+
+    cost: callable
+        function from model.cost, evaluates cost function
+
+    grad: callable
+        function from model.cost, evaluates cost function gradient using adjoint
+
+    control: list
+        control vector to evaluate at
+
+    cost_args: list
+        arguments for cost and gradient functions
+
+    check_dir: Path
+        stamped directory to write this check's .csv into
+
+    N_times: int
+        number of timesteps, i.e. the length of one model-error block
+    """
+
+    control = np.asarray(control, dtype=float)
+    n_controls = len(control)
+
+    # Work out the control-vector layout, which for every model in this family
+    # is three distinct groups:
+    #
+    #   initial conditions   3 + n_reg      T1, T2, Q, T_R1 ... T_Rn
+    #   parameters           6 + 2 * n_reg  L, G, EPS, C1, C2, F1_CO2,
+    #                                       ALPHA_R1 ... n, BETA_R1 ... n
+    #   model errors         n_blocks * N_times
+    #
+    # These are reported separately rather than as one lump, so a failure is
+    # localised to the initial conditions or the parameters rather than merely
+    # to "the non-model-error part". n_reg comes from the observation vector,
+    # which is [T1, Q, T_R1 ... T_Rn] for all of these models.
+    #
+    # NOTE: do NOT infer the split as n_controls // N_times. That is only
+    # correct while the parameter count is below N_times, and it fails
+    # silently -- producing a plausible but wrong split -- for short windows.
+    obs = cost_args[-5]
+    n_reg = np.shape(obs)[0] - 2
+
+    n_ics = 3 + n_reg
+    n_pars = 6 + 2 * n_reg
+
+    n_q = n_controls - n_ics - n_pars
+
+    if n_q < 0 or n_q % N_times != 0:
+        raise ValueError(
+            f"Control-vector layout for {args.model} does not match "
+            f"expectations: {n_controls} controls with n_reg={n_reg} implies "
+            f"{n_ics} initial conditions, {n_pars} parameters, and {n_q} model "
+            f"errors, which is not a whole number of blocks of N_times={N_times}."
+        )
+
+    n_blocks = n_q // N_times
+
+    # 0 blocks for a deterministic model, 1 for global noise only, and one per
+    # region on top of that when regional noise is switched on
+    if n_blocks not in (0, 1, 1 + n_reg):
+        raise ValueError(
+            f"Unexpected number of model-error blocks for {args.model}: "
+            f"got {n_blocks}, expected 0, 1, or {1 + n_reg}."
+        )
+
+    # model-error block 0 is always the global (GMST) noise; any remaining
+    # blocks are regional, matching the runners' var_names ordering
+    block_names = ["ics", "params"]
+    if n_blocks >= 1:
+        block_names.append("qAT")
+    block_names += [f"qR{i}" for i in range(1, n_blocks)]
+
+    n_fixed = n_ics + n_pars
+    block_bounds = [(0, n_ics), (n_ics, n_fixed)] + [
+        (n_fixed + b * N_times, n_fixed + (b + 1) * N_times) for b in range(n_blocks)
+    ]
+
+    # prior term of the gradient. this is analytic and does not involve the
+    # adjoint, so removing it isolates the observation piece
+    x_f, inv_covar_prior = cost_args[0], cost_args[1]
+    prior_grad = inv_covar_prior @ (control - np.asarray(x_f, dtype=float))
+
+    # adjoint gradient
+    grad_adj = np.asarray(grad(control, cost_args), dtype=float)
+
+    # central finite-difference gradient, with a per-component step: the
+    # control vector mixes O(100) heat capacities with O(0.1) model errors, so
+    # a single absolute step would be badly scaled for one end or the other
+    grad_fd = np.empty(n_controls)
+    for j in range(n_controls):
+        step = GRAD_BLOCK_FD_STEP * max(1.0, abs(control[j]))
+
+        control_up, control_dn = control.copy(), control.copy()
+        control_up[j] += step
+        control_dn[j] -= step
+
+        grad_fd[j] = (cost(control_up, cost_args) - cost(control_dn, cost_args)) / (
+            2.0 * step
+        )
+
+    def _rel_err(approx, exact):
+        """Relative L2 error, guarding against an all-zero reference block."""
+        denom = np.linalg.norm(exact)
+        if denom == 0.0:
+            return 0.0 if np.linalg.norm(approx) == 0.0 else np.inf
+        return np.linalg.norm(approx - exact) / denom
+
+    rows = []
+    for name, (lo, hi) in zip(block_names, block_bounds):
+        rel_err = _rel_err(grad_adj[lo:hi], grad_fd[lo:hi])
+        rel_err_obs = _rel_err(
+            grad_adj[lo:hi] - prior_grad[lo:hi], grad_fd[lo:hi] - prior_grad[lo:hi]
+        )
+        passed = bool(rel_err < GRAD_BLOCK_TOL)
+
+        rows.append(
+            {
+                "block": name,
+                "i_start": lo,
+                "i_end": hi,
+                "n": hi - lo,
+                "rel_err": rel_err,
+                "rel_err_obs_only": rel_err_obs,
+                "max_abs_err": float(np.max(np.abs(grad_adj[lo:hi] - grad_fd[lo:hi]))),
+                "grad_norm_adj": float(np.linalg.norm(grad_adj[lo:hi])),
+                "grad_norm_fd": float(np.linalg.norm(grad_fd[lo:hi])),
+                "tol": GRAD_BLOCK_TOL,
+                "pass": passed,
+            }
+        )
+
+        logger.info(
+            f"            >>> (FLAGGED) grad block {name:6s} "
+            f"[{lo:4d}:{hi:4d}]  rel err = {rel_err:.3e}  "
+            f"(obs only {rel_err_obs:.3e})  {'pass' if passed else 'FAIL'}"
+        )
+
+    df = pd.DataFrame(rows)
+
+    n_failed = int((~df["pass"]).sum())
+    if n_failed:
+        logger.warning(
+            f"            >>> (FLAGGED) per-block gradient check FAILED for "
+            f"{n_failed}/{len(df)} blocks "
+            f"({', '.join(df.loc[~df['pass'], 'block'])}) "
+            f"at tol={GRAD_BLOCK_TOL:g}"
+        )
+    else:
+        logger.info(
+            f"            >>> (FLAGGED) per-block gradient check passed for all "
+            f"{len(df)} blocks at tol={GRAD_BLOCK_TOL:g}"
+        )
+
+    # save to csv file
+    datapath = check_dir / "grad_block_check.csv"
 
     df.to_csv(datapath, sep=",", index=False)
