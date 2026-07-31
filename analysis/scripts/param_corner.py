@@ -31,38 +31,73 @@ presets, basefile = get_presets()
 plt.rcParams.update(presets)
 
 # pull date file
-file = "../model/data/output/" + assim + "_wind" + str(TMIN) + "_" + str(TMAX)\
-      + "_N" + str(N) + "_" + obs + ".nc"
+file = (
+    "../model/data/output/"
+    + assim
+    + "_wind"
+    + str(TMIN)
+    + "_"
+    + str(TMAX)
+    + "_N"
+    + str(N)
+    + "_"
+    + obs
+    + ".nc"
+)
 
 # file = "../model/data/output/heatfull_N1000_iid.nc"
 
 ds = xr.open_dataset(file)
 
-ds_ensavg = ds.mean('ens_mem')
+ds_ensavg = ds.mean("ens_mem")
 
 # fig = cr.corner(ds.controls_hist.values[:, :, 0],
 #                color='cyan')
-                #range=[(min(ds.controls_hist.values[:, i, 0]),
-                #        max(ds.controls_hist.values[:, i, 0]))
-                #        for i in range(np.shape(ds.controls_hist.values)[1])])
+# range=[(min(ds.controls_hist.values[:, i, 0]),
+#        max(ds.controls_hist.values[:, i, 0]))
+#        for i in range(np.shape(ds.controls_hist.values)[1])])
 
-fig = cr.corner(ds.controls.values,
-          labels=['T1', 'T2', 'Q', 'L', 'G', 'C1', 'C2', 'F1', 'F3',
-                  'A_SO2', 'B_SO2', 'C_SO2'],
-          truths=ds.controls_truth.values,
-          truth_color='#CC79A7',
-          labelpad=0.25)
+fig = cr.corner(
+    ds.controls.values,
+    labels=[
+        "T1",
+        "T2",
+        "Q",
+        "L",
+        "G",
+        "C1",
+        "C2",
+        "F1",
+        "F3",
+        "A_SO2",
+        "B_SO2",
+        "C_SO2",
+    ],
+    truths=ds.controls_truth.values,
+    truth_color="#CC79A7",
+    labelpad=0.25,
+)
 
-cr.overplot_lines(fig, ds_ensavg.controls.values, color='g')
-cr.overplot_points(fig, ds_ensavg.controls.values[None], marker='s', color='g')
+cr.overplot_lines(fig, ds_ensavg.controls.values, color="g")
+cr.overplot_points(fig, ds_ensavg.controls.values[None], marker="s", color="g")
 
 fig.tight_layout()
 
 # plt.show()
 
 if save_figs:
-    filename = basefile + assim + "_wind"\
-        + str(TMIN) + "_" + str(TMAX) + "_N" + str(N) + "_" + obs\
+    filename = (
+        basefile
+        + assim
+        + "_wind"
+        + str(TMIN)
+        + "_"
+        + str(TMAX)
+        + "_N"
+        + str(N)
+        + "_"
+        + obs
         + "_param_corner.png"
+    )
     fig.savefig(filename, dpi=400)
     print("Figure saved to:\n{}".format(filename))
