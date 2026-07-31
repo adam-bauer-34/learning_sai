@@ -22,7 +22,11 @@ from dask.distributed import performance_report
 from var_assim.dask import start_dask, run_ensemble
 from var_assim.warm_start import warm_start_simulation
 from var_assim.emis import EmissionsBaseline
-from var_assim.model_errors import gen_noise_ts
+from var_assim.model_errors import (
+    gen_noise_ts,
+    get_window_max_timesteps,
+    get_window_prefix_inds,
+)
 from var_assim.tlm_adj_checks import run_component_checks
 from var_assim.stats.covar import get_covar_white
 from var_assim.stats.draws import get_prior_draws
@@ -79,6 +83,69 @@ def run_var_assim_experiment(
     # dictionary to make datatree out of later
     results_dict = {}
 
+    # The truth's model errors and the prior ensemble are drawn ONCE here, at the
+    # length of the longest window, and each window takes a prefix of every block.
+    # Drawing them inside the window loop does not reproduce the same values even
+    # with the RNG re-seeded, because the dimension of the draw grows with the
+    # window -- see get_window_prefix_inds for the mechanism and the measurements.
+    # Slicing is exact, not approximate, because the AR(1) covariance is Toeplitz.
+    N_MAX = get_window_max_timesteps(Windowing.windows, DT)
+    N_BLOCKS = 1 + len(Noise.INT_T_REG_STD)  # global + one per region
+    N_FIXED = 18
+
+    mod_errors_rng = np.random.default_rng(seed=MOD_ERROR_SEED)
+    mod_errors_full, mod_error_covar_full = gen_noise_ts(Noise, N_MAX, rng=mod_errors_rng)
+
+    r1_rng = np.random.default_rng(seed=REG1_NOISE_SEED)
+    r2_rng = np.random.default_rng(seed=REG2_NOISE_SEED)
+    r3_rng = np.random.default_rng(seed=REG3_NOISE_SEED)
+
+    reg_covars_full = [
+        get_covar_white(np.array([INT_T_REGx_STD] * N_MAX), N_MAX)
+        for INT_T_REGx_STD in Noise.INT_T_REG_STD
+    ]
+
+    mod_errors_r1_full, mod_errors_r2_full, mod_errors_r3_full = [
+        rng.multivariate_normal(np.array([0.0] * N_MAX), covar)
+        for rng, covar in zip((r1_rng, r2_rng, r3_rng), reg_covars_full)
+    ]
+
+    # full-length prior moments, needed only to draw the full-length ensemble
+    all_mod_errors_full = np.hstack(
+        [mod_errors_full, mod_errors_r1_full, mod_errors_r2_full, mod_errors_r3_full]
+    )
+    controls_cen_full = Prior.get_augmented_cen_vector(
+        np.zeros_like(all_mod_errors_full)
+    )
+    prior_stds_full = Prior.get_augmented_std_vector(
+        np.hstack(
+            [
+                np.ones_like(mod_errors_full),
+                np.hstack(
+                    [
+                        [INT_T_REGx_STD] * N_MAX
+                        for INT_T_REGx_STD in Noise.INT_T_REG_STD
+                    ]
+                ),
+            ]
+        )
+    )
+    inv_covar_prior_full = get_covar_white(
+        prior_stds_full, len(prior_stds_full), inv=True
+    )
+    inv_covar_prior_full[N_FIXED : N_FIXED + N_MAX, N_FIXED : N_FIXED + N_MAX] = (
+        np.linalg.inv(mod_error_covar_full)
+    )
+
+    prior_rng = np.random.default_rng(seed=PRIOR_SEED)
+    theta_prior_full = get_prior_draws(
+        args.model,
+        controls_cen_full,
+        np.linalg.inv(inv_covar_prior_full),
+        args.n_ens,
+        rng=prior_rng,
+    )
+
     for TMIN, TMAX in Windowing.windows:
         logger.info(f"    > Carrying out data assimilation for window {TMIN}-{TMAX}")
 
@@ -99,35 +166,17 @@ def run_var_assim_experiment(
         N_timesteps = len(e.conc["CO2"])
 
         t0 = time.time()
-        # make global model errors and their covariance matrix
-        mod_errors_rng = np.random.default_rng(seed=MOD_ERROR_SEED)
-        mod_errors, mod_error_covar = gen_noise_ts(
-            Noise, N_timesteps, rng=mod_errors_rng
-        )
+        # take this window's prefix of the full-length draws made above, so that a
+        # given ensemble member keeps the same parameters and initial conditions in
+        # every window and the truth stays fixed on the overlapping span
+        prefix_inds = get_window_prefix_inds(N_FIXED, N_BLOCKS, N_MAX, N_timesteps)
 
-        # make regional covariance matrices
-        r1_rng = np.random.default_rng(seed=REG1_NOISE_SEED)
-        r2_rng = np.random.default_rng(seed=REG2_NOISE_SEED)
-        r3_rng = np.random.default_rng(seed=REG3_NOISE_SEED)
+        mod_errors = mod_errors_full[:N_timesteps]
+        mod_error_covar = mod_error_covar_full[:N_timesteps, :N_timesteps]
 
-        # regions (in this case, 2)
-        R1_mod_error_covar, R2_mod_error_covar, R3_mod_error_covar = [
-            get_covar_white(np.array([INT_T_REGx_STD] * N_timesteps), N_timesteps)
-            for INT_T_REGx_STD in Noise.INT_T_REG_STD
-        ]
-
-        # make model error time series
-        mod_errors_r1 = r1_rng.multivariate_normal(
-            np.array([0.0] * N_timesteps), R1_mod_error_covar
-        )
-
-        mod_errors_r2 = r2_rng.multivariate_normal(
-            np.array([0.0] * N_timesteps), R2_mod_error_covar
-        )
-
-        mod_errors_r3 = r3_rng.multivariate_normal(
-            np.array([0.0] * N_timesteps), R3_mod_error_covar
-        )
+        mod_errors_r1 = mod_errors_r1_full[:N_timesteps]
+        mod_errors_r2 = mod_errors_r2_full[:N_timesteps]
+        mod_errors_r3 = mod_errors_r3_full[:N_timesteps]
 
         logger.debug(f"    ! region 1 model errors std: {np.std(mod_errors_r1)}")
         logger.debug(f"    ! region 2 model errors std: {np.std(mod_errors_r2)}")
@@ -247,17 +296,10 @@ def run_var_assim_experiment(
         tol = opt_config["tol"]
         max_iter = opt_config["max_iter"]
 
-        # give first guess at initial conditions
-        t0 = time.time()
-        prior_rng = np.random.default_rng(seed=PRIOR_SEED)
-        theta_prior = get_prior_draws(
-            args.model,
-            controls_cen,
-            np.linalg.inv(inv_covar_prior),
-            args.n_ens,
-            rng=prior_rng,
-        )
-        logger.debug(f"    ! generating prior draws took {time.time() - t0} s")
+        # give first guess at initial conditions. this is the prefix of the
+        # full-length ensemble drawn before the window loop, so ensemble member i
+        # has the same parameters and initial conditions in every window
+        theta_prior = theta_prior_full[:, prefix_inds]
 
         logger.debug(
             f"    ! mean of parameter prior: {np.mean(theta_prior[:, :18], axis=0)}"
