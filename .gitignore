@@ -20,3 +20,4 @@ figs/
 old/
 experiments/perf_reports/
 img/
+.claude/
