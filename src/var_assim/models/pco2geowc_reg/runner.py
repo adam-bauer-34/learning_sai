@@ -223,6 +223,15 @@ def run_var_assim_experiment(
         logger.debug(f"    ! inverse covariance matrix for prior: {inv_covar_prior}")
 
         # make observation error covariance matrices
+        # NOTE: these stds are not necessarily the flat 1.0 from noise.yaml --
+        # see the obs_weighting block there. logged so a run's output records
+        # which weighting produced it.
+        logger.info(
+            f"        >> obs error stds ({Noise.OBS_WEIGHTING}): "
+            f"T1={Noise.OBS_T1_STD:.4g}  Q={Noise.OBS_Q_STD:.4g}  "
+            f"T_REG={np.round(Noise.OBS_T_REG_STD, 4).tolist()}"
+        )
+
         # global temp
         inv_covar_T1_obs = get_covar_white(
             np.array([Noise.OBS_T1_STD] * len(times)), len(times), inv=True
