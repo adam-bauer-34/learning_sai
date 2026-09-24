@@ -16,8 +16,8 @@ global:
   C2_CEN: 100.0
   C2_STD: None
 
-  # forcing efficacy of co2, calibrated to RFMIP results (Smith et al 2020)
-  # they found F2x = 3.99 +/- 0.19 W / m^2
+  # forcing efficacy of co2
+  # calibrated to match RFMIP central estimate: F2x = 3.99 +/- 0.19 W / m^2
   F1_CO2_CEN: 5.756353213
   F1_CO2_STD: 0.2741120578
 
