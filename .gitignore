@@ -21,3 +21,5 @@ old/
 experiments/perf_reports/
 img/
 .claude/
+# Oberon (out-of-context telemetry, postmortems, raw blobs)
+.oberon/

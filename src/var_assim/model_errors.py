@@ -77,7 +77,7 @@ def get_window_max_timesteps(windows, DT):
     return max(len(np.arange(t_0, t_1 + DT, DT)) for t_0, t_1 in windows)
 
 
-def get_window_prefix_inds(n_fixed, n_blocks, N_max, N_times):
+def get_window_prefix_inds(n_fixed, n_blocks, N_max, N_times, q_offset=0):
     """Map a full-length control vector onto a single assimilation window.
 
     The control vector is [n_fixed initial conditions and parameters] followed by
@@ -103,6 +103,11 @@ def get_window_prefix_inds(n_fixed, n_blocks, N_max, N_times):
     blocks are diagonal. Taking a prefix of each block therefore marginalises the
     long draw onto precisely the shorter window's distribution.
 
+    Models with no model error at t = 0 (e.g. pco2geowc_reg_noic) pass
+    `q_offset=1`, which takes entries `q_offset:N_times` of each block instead
+    of `:N_times`. Dropping leading entries of a Toeplitz block is still exact
+    marginalisation.
+
     Parameters
     ----------
     n_fixed: int
@@ -116,11 +121,15 @@ def get_window_prefix_inds(n_fixed, n_blocks, N_max, N_times):
         block length in the full-length vector
 
     N_times: int
-        block length for this window; must not exceed N_max
+        timesteps in this window; must not exceed N_max
+
+    q_offset: int = 0
+        number of leading entries dropped from each block, so each block
+        contributes N_times - q_offset entries
 
     Returns
     -------
-    inds: (n_fixed + n_blocks * N_times,) int array
+    inds: (n_fixed + n_blocks * (N_times - q_offset),) int array
         columns of the full-length vector belonging to this window
     """
 
@@ -134,7 +143,7 @@ def get_window_prefix_inds(n_fixed, n_blocks, N_max, N_times):
     return np.hstack(
         [np.arange(n_fixed)]
         + [
-            n_fixed + b * N_max + np.arange(N_times, dtype=int)
+            n_fixed + b * N_max + np.arange(q_offset, N_times, dtype=int)
             for b in range(n_blocks)
         ]
     ).astype(int)

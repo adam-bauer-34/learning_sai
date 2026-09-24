@@ -65,6 +65,12 @@ V_SHAPE_MIN_DECADES = 4
 # of the descending branch without admitting a plateau (~0) or a slope-2 run.
 V_SHAPE_SLOPE_BAND = (-1.3, -0.7)
 
+# maximum number of timesteps the adjoint identity check integrates. the check
+# re-integrates the TLM and adjoint over every sub-window up to this length, so
+# its cost grows quadratically with the step count, and the only behaviour that
+# matters is near t = 0.
+ADJ_ID_MAX_STEPS = 16
+
 
 def _get_check_stamp():
     """Build a provenance stamp identifying the code that produced a check.
@@ -220,8 +226,16 @@ def run_component_checks(logger, args, e, controls, TMIN, TMAX, cost_args, DT=1.
     # full normalised gradient direction, where the parameter block dominates
     # and a badly wrong model-error block barely registers. reported per block,
     # the same defect is orders of magnitude more visible.
+    #
+    # models with no model error at the first q_offset timesteps have blocks of
+    # N_times - q_offset entries. imported here because var_assim.models imports
+    # every runner, and each runner imports this module
+    from var_assim.models import MODEL_REGISTRY
+
+    N_q = N_times - MODEL_REGISTRY[args.model].get("q_offset", 0)
+
     _do_grad_block_check(
-        logger, args, cost, grad, controls * 1.1, cost_args, check_dir, N_times
+        logger, args, cost, grad, controls * 1.1, cost_args, check_dir, N_q
     )
 
 
@@ -381,7 +395,8 @@ def _do_adj_id_check(
     # loop through, taking progressively more timesteps
     # (presumably, the more timesteps you take, the worse the linear
     # approximation does)
-    for t in range(1, TMAX - TMIN + 1):
+    n_steps = min(TMAX - TMIN, ADJ_ID_MAX_STEPS)
+    for t in range(1, n_steps + 1):
         # get TLM trajectory and full nonlinear trajectory
         nonlin_p, _ = get_nonlin_path(e, controls, TMIN, TMIN + t, DT)
         tlm_p = get_tlm_path(e, controls, TMIN, TMIN + t, DT, nonlin_p)
@@ -411,7 +426,7 @@ def _do_adj_id_check(
 
     # make dataframe of output and return
     data = {
-        "timesteps taken": [t for t in range(1, TMAX - TMIN + 1)],
+        "timesteps taken": [t for t in range(1, n_steps + 1)],
         "identity": id_t,
         "log(|identity - 1|)": np.log10(np.abs(np.array(id_t) - 1)),
     }
@@ -676,7 +691,8 @@ def _do_grad_block_check(
         stamped directory to write this check's .csv into
 
     N_times: int
-        number of timesteps, i.e. the length of one model-error block
+        length of one model-error block. this is the number of timesteps,
+        less the registry's q_offset for models with no t = 0 model error
     """
 
     control = np.asarray(control, dtype=float)

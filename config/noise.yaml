@@ -21,7 +21,60 @@ noise_model:
     two_region:
       OBS_T_REG_STD: [1.0, 1.0]  # obs noise in reg 1 and 2
       INT_T_REG_STD: [0.35, 0.3]  # internal variability mag for reg 1 and 2
-    
+
     three_region:
       OBS_T_REG_STD: [1.0, 1.0, 1.0]  # obs noise in regions 1, 2, 3
       INT_T_REG_STD: [0.35, 0.3, 0.25]  # internal variability mag for reg 1 and 2
+
+# Observation-error weighting, per model.
+#
+# WHY THIS EXISTS. The OBS_*_STD values above are all 1.0, described in the
+# comments as "no observation noise". The cost function does not read them that
+# way: it reads them as one kelvin of error on each temperature and one OHC unit
+# of error on Q. Because the observables have very different magnitudes, a common
+# sigma of 1.0 is not a neutral choice. Measured over 2023-2100:
+#
+#   observable   RMS     implied fractional error at sigma = 1.0
+#   T1            1.24                 81%
+#   Q            58.7                 1.7%
+#   T_R1          1.81                 55%
+#   T_R2          1.82                 55%
+#
+# So Q is weighted roughly 30x more tightly than the temperatures in fractional
+# terms, and the observation term is dominated by ocean heat content while the
+# regional temperatures -- which carry all of the SAI pattern information, and
+# hence all of the information about the inequality angle theta -- float nearly
+# free.
+#
+# For any model listed below, the observation errors are instead DERIVED from two
+# primitive assumptions about how well the underlying temperatures are known:
+#
+#   sigma(T1)   = OBS_T1_STD                                    (assumed)
+#   sigma(T2)   = OBS_T2_STD                                    (assumed)
+#   sigma(T_Rj) = ALPHA_CEN[j] * OBS_T1_STD
+#   sigma(Q)    = sqrt((C1_CEN * sigma(T1))^2 + (C2_CEN * sigma(T2))^2)
+#
+# Notes on each:
+#   - T2 is NOT an observed quantity; the observation vector is
+#     [T1, Q, T_R1, ..., T_Rn]. OBS_T2_STD enters only by propagating into Q
+#     through Q = C1*T1 + C2*T2. It is specified because deep-ocean temperature
+#     is easier to reason about physically than Q, whose units are
+#     heat-capacity x kelvin.
+#   - the T1 and T2 errors are treated as independent, hence the sum in
+#     quadrature. Perfectly correlated errors would give C1*s_T1 + C2*s_T2
+#     instead, which for these constants differs by under 4%.
+#   - regional means are taken to be noisier than the global mean in proportion
+#     to their pattern-scaling amplitude ALPHA_CEN. This is a proxy for "less
+#     spatial averaging, so more noise", not a rigorous propagation.
+#
+# ALPHA_CEN, C1_CEN and C2_CEN are read from priors.yaml at load time rather than
+# hardcoded here, so these cannot silently go stale if the calibration changes.
+#
+# Models absent from this block keep the legacy 1.0 weighting above.
+obs_weighting:
+  pco2geowc_reg:
+    OBS_T1_STD: 0.1  # assumed error on annual global mean temperature, K
+    OBS_T2_STD: 0.2  # assumed error on deep ocean temperature, K (propagates into Q only)
+  pco2geowc_reg_noic:  # same weighting as pco2geowc_reg, so the two are comparable
+    OBS_T1_STD: 0.1
+    OBS_T2_STD: 0.2

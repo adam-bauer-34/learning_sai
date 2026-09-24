@@ -41,9 +41,9 @@ from var_assim.config import (
     REG2_NOISE_SEED,
 )
 
-from var_assim.models.pco2geowc_reg.dynamics import get_nonlin_path
-from var_assim.models.pco2geowc_reg.obs import get_obs_from_dynamics
-from var_assim.models.pco2geowc_reg.parallelization import EnsembleMember, runner_4dvar
+from var_assim.models.pco2geowc_reg_noic.dynamics import get_nonlin_path
+from var_assim.models.pco2geowc_reg_noic.obs import get_obs_from_dynamics
+from var_assim.models.pco2geowc_reg_noic.parallelization import EnsembleMember, runner_4dvar
 
 SLURM_JOB_ID = os.environ.get("SLURM_JOB_ID", "local")
 
@@ -170,14 +170,23 @@ def run_var_assim_experiment(
 
         # take this window's prefix of the full-length draws made above, so that a
         # given ensemble member keeps the same parameters and initial conditions in
-        # every window and the truth stays fixed on the overlapping span
-        prefix_inds = get_window_prefix_inds(N_FIXED, N_BLOCKS, N_MAX, N_timesteps)
+        # every window and the truth stays fixed on the overlapping span.
+        #
+        # this model has no model error at t = 0, so each block drops its first
+        # entry (q_offset=1) and has length N_timesteps - 1. the full-length draws
+        # are the same as pco2geowc_reg's, so the truth's model errors for t >= 1
+        # match that model exactly. dropping an entry of a Gaussian draw is exact
+        # marginalisation, and the AR(1) covariance is Toeplitz, so
+        # covar_full[1:N, 1:N] is precisely the length-(N - 1) covariance.
+        prefix_inds = get_window_prefix_inds(
+            N_FIXED, N_BLOCKS, N_MAX, N_timesteps, q_offset=1
+        )
 
-        mod_errors = mod_errors_full[:N_timesteps]
-        mod_error_covar = mod_error_covar_full[:N_timesteps, :N_timesteps]
+        mod_errors = mod_errors_full[1:N_timesteps]
+        mod_error_covar = mod_error_covar_full[1:N_timesteps, 1:N_timesteps]
 
-        mod_errors_r1 = mod_errors_r1_full[:N_timesteps]
-        mod_errors_r2 = mod_errors_r2_full[:N_timesteps]
+        mod_errors_r1 = mod_errors_r1_full[1:N_timesteps]
+        mod_errors_r2 = mod_errors_r2_full[1:N_timesteps]
 
         logger.debug(f"    ! region 1 model errors: {mod_errors_r1}")
         logger.debug(f"    ! region 2 model errors: {mod_errors_r2}")
@@ -202,7 +211,10 @@ def run_var_assim_experiment(
 
         # make prior stds vector
         regional_stds = np.hstack(
-            [[INT_T_REGx_STD] * N_timesteps for INT_T_REGx_STD in Noise.INT_T_REG_STD]
+            [
+                [INT_T_REGx_STD] * (N_timesteps - 1)
+                for INT_T_REGx_STD in Noise.INT_T_REG_STD
+            ]
         )
         # NOTE: mod errors can be red, so insert dummy here an insert their inverse cov
         # matrix later
@@ -406,9 +418,9 @@ def run_var_assim_experiment(
                     "BETA_R1",
                     "BETA_R2",
                 ],
-                ["qAT_" + str(i) for i in range(len(times))],
-                ["qR1_" + str(i) for i in range(len(times))],
-                ["qR2_" + str(i) for i in range(len(times))],
+                ["qAT_" + str(i) for i in range(1, len(times))],
+                ["qR1_" + str(i) for i in range(1, len(times))],
+                ["qR2_" + str(i) for i in range(1, len(times))],
             ]
         )
 
