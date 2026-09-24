@@ -220,8 +220,16 @@ def run_component_checks(logger, args, e, controls, TMIN, TMAX, cost_args, DT=1.
     # full normalised gradient direction, where the parameter block dominates
     # and a badly wrong model-error block barely registers. reported per block,
     # the same defect is orders of magnitude more visible.
+    #
+    # models with no model error at the first q_offset timesteps have blocks of
+    # N_times - q_offset entries. imported here because var_assim.models imports
+    # every runner, and each runner imports this module
+    from var_assim.models import MODEL_REGISTRY
+
+    N_q = N_times - MODEL_REGISTRY[args.model].get("q_offset", 0)
+
     _do_grad_block_check(
-        logger, args, cost, grad, controls * 1.1, cost_args, check_dir, N_times
+        logger, args, cost, grad, controls * 1.1, cost_args, check_dir, N_q
     )
 
 
@@ -676,7 +684,8 @@ def _do_grad_block_check(
         stamped directory to write this check's .csv into
 
     N_times: int
-        number of timesteps, i.e. the length of one model-error block
+        length of one model-error block. this is the number of timesteps,
+        less the registry's q_offset for models with no t = 0 model error
     """
 
     control = np.asarray(control, dtype=float)

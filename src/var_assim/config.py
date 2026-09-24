@@ -57,6 +57,7 @@ def parse_args():
             "pco2geowc3",
             "pco2geowc_nn",
             "pco2geowc_reg",
+            "pco2geowc_reg_noic",
             "pco2geowc3_reg",
             "pco2geowc3_nn",
         ],
@@ -215,7 +216,7 @@ def check_config_compatability(args):
             f"Windowing scheme {args.windowing} is designed for a warm start beginning in 2023. Please set --tmin to 2023."
         )
 
-    if args.model == "pco2geowc_reg" and not args.reg_noise:
+    if args.model in ("pco2geowc_reg", "pco2geowc_reg_noic") and not args.reg_noise:
         raise ValueError(f"{args.model} cannot be run without --reg_noise flag")
 
     if args.model == "pco2geowc3_reg" and not args.reg_noise:

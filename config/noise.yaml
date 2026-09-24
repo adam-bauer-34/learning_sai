@@ -75,3 +75,6 @@ obs_weighting:
   pco2geowc_reg:
     OBS_T1_STD: 0.1  # assumed error on annual global mean temperature, K
     OBS_T2_STD: 0.2  # assumed error on deep ocean temperature, K (propagates into Q only)
+  pco2geowc_reg_noic:  # same weighting as pco2geowc_reg, so the two are comparable
+    OBS_T1_STD: 0.1
+    OBS_T2_STD: 0.2
