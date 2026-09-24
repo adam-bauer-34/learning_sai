@@ -41,9 +41,16 @@ def warm_start_simulation(
     elif "_reg" in args.model and "3_reg" not in args.model:
         # if it's a two region regional model, you need three strings of model errors to warm start the model
         logger.debug("       >> Running 2 regional noise warm start...")
-        controls_tr_aug = Truth.get_augmented_truth_vector(
-            np.hstack([np.zeros_like(e.conc["CO2"])] * 3)
-        )
+
+        # some models have no model error at the first q_offset timesteps, so
+        # their blocks are shorter than the time axis. imported here because
+        # var_assim.models imports every runner, which imports this module
+        from var_assim.models import MODEL_REGISTRY
+
+        q_offset = MODEL_REGISTRY[args.model].get("q_offset", 0)
+        N_q = len(e.conc["CO2"]) - q_offset
+
+        controls_tr_aug = Truth.get_augmented_truth_vector(np.zeros(3 * N_q))
 
     elif "3_reg" in args.model:
         # if it's a three region regional model, you need 4

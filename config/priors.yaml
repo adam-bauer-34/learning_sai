@@ -15,8 +15,9 @@ global:
   C2_STD: None
 
   # forcing efficacy of co2
-  F1_CO2_CEN: 4.58
-  F1_CO2_STD: 0.519  # from Zelinka et al. (2020)
+  # calibrated to match RFMIP central estimate: F2x = 3.99 +/- 0.19 W / m^2
+  F1_CO2_CEN: 5.756353213
+  F1_CO2_STD: 0.2741120578
 
   # climate feedback (set by ECS in dataclass initialization)
   L_CEN: None

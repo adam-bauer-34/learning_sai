@@ -15,7 +15,11 @@
 #SBATCH --mem=80G
 # ---------------------------
 
-#SBATCH --mail-user=ambauer@rcc.uchicago.edu
+#SBATCH --mail-user=rcc.ambauer@uchicago.edu
+# BEGIN,END applies to the array as a whole, not per task: one email when the
+# first task starts and one when the last task finishes, rather than one pair
+# per array element. add ARRAY_TASKS to the list to get email for every task.
+#SBATCH --mail-type=BEGIN,END
 
 # Ensure logs directory exists
 cd /project/bbcael/ambauer/learning_sai
