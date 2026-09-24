@@ -3,8 +3,10 @@ global:
   ECS_CEN: 3.0  # default, can be changed in CLI
 
   # ocean transport coefficient
-  G_CEN: 0.7
-  G_STD: None
+  # central estimate and standard deviation set to match IPCC AR6 likely range for 
+  # TCR (1.8, likely range 1.4-2.2)
+  G_CEN: 0.62
+  G_STD: 0.26
 
   # surface heat capacity
   C1_CEN: 8.0
@@ -14,13 +16,15 @@ global:
   C2_CEN: 100.0
   C2_STD: None
 
-  # forcing efficacy of co2
-  F1_CO2_CEN: 4.58
-  F1_CO2_STD: 0.519  # from Zelinka et al. (2020)
+  # forcing efficacy of co2, calibrated to RFMIP results (Smith et al 2020)
+  # they found F2x = 3.99 +/- 0.19 W / m^2
+  F1_CO2_CEN: 5.756353213
+  F1_CO2_STD: 0.2741120578
 
   # climate feedback (set by ECS in dataclass initialization)
+  # standard deviation from matching ECS distribution to Sherwood et al (2020)
   L_CEN: None
-  L_STD: None
+  L_STD: 0.31
 
   # pattern effect parameter
   EPS_CEN: 1.58
@@ -31,8 +35,6 @@ global:
 
   # set a list of variables that need the PRIOR_STD_FACTOR to set their prior variances
   factor_vars:
-    - [L_CEN, L_STD]
-    - [G_CEN, G_STD]
     - [C1_CEN, C1_STD]
     - [C2_CEN, C2_STD]
 

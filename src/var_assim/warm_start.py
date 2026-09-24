@@ -48,9 +48,14 @@ def warm_start_simulation(
     elif "3_reg" in args.model:
         # if it's a three region regional model, you need 4
         logger.debug("       >> Running 3 regional noise warm start...")
-        controls_tr_aug = Truth.get_augmented_truth_vector(
-            np.hstack([np.zeros_like(e.conc["CO2"])] * 4)
-        )
+
+        # see the two-region branch above for q_offset
+        from var_assim.models import MODEL_REGISTRY
+
+        q_offset = MODEL_REGISTRY[args.model].get("q_offset", 0)
+        N_q = len(e.conc["CO2"]) - q_offset
+
+        controls_tr_aug = Truth.get_augmented_truth_vector(np.zeros(4 * N_q))
 
     else:
         # get true controls vector for model simulation
