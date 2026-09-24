@@ -7,6 +7,7 @@ Jan 2026
 
 import yaml
 import argparse
+import warnings
 
 from pathlib import Path
 
@@ -121,7 +122,14 @@ def parse_args():
         "--windowing",
         type=str,
         default="original",
-        choices=["original", "debug", "fine_grad_coarse", "four", "ws_gradual"],
+        choices=[
+            "original",
+            "debug",
+            "fine_grad_coarse",
+            "four",
+            "ws_gradual",
+            "gradual",
+        ],
         help="Assimilation window name; config pulled from config/windowing.yaml.",
     )
 
@@ -216,6 +224,16 @@ def check_config_compatability(args):
         raise ValueError(
             f"Windowing scheme {args.windowing} is designed for a warm start beginning in 2023. Please set --tmin to 2023."
         )
+
+    if args.windowing == "gradual":
+        if args.tmin >= 2030:
+            raise ValueError(
+                f"Windowing scheme {args.windowing} has its first window ending in 2030, so --tmin must be before 2030 (got {args.tmin}). It is designed for --tmin 2025."
+            )
+        if args.tmin != 2025:
+            warnings.warn(
+                f"Windowing scheme {args.windowing} is designed for --tmin 2025 (got {args.tmin}); the first window length will differ from the intended 5 years."
+            )
 
     if args.model in ("pco2geowc_reg", "pco2geowc_reg_noic") and not args.reg_noise:
         raise ValueError(f"{args.model} cannot be run without --reg_noise flag")
