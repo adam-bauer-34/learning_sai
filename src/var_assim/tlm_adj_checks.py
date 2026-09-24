@@ -65,6 +65,12 @@ V_SHAPE_MIN_DECADES = 4
 # of the descending branch without admitting a plateau (~0) or a slope-2 run.
 V_SHAPE_SLOPE_BAND = (-1.3, -0.7)
 
+# maximum number of timesteps the adjoint identity check integrates. the check
+# re-integrates the TLM and adjoint over every sub-window up to this length, so
+# its cost grows quadratically with the step count, and the only behaviour that
+# matters is near t = 0.
+ADJ_ID_MAX_STEPS = 16
+
 
 def _get_check_stamp():
     """Build a provenance stamp identifying the code that produced a check.
@@ -389,7 +395,8 @@ def _do_adj_id_check(
     # loop through, taking progressively more timesteps
     # (presumably, the more timesteps you take, the worse the linear
     # approximation does)
-    for t in range(1, TMAX - TMIN + 1):
+    n_steps = min(TMAX - TMIN, ADJ_ID_MAX_STEPS)
+    for t in range(1, n_steps + 1):
         # get TLM trajectory and full nonlinear trajectory
         nonlin_p, _ = get_nonlin_path(e, controls, TMIN, TMIN + t, DT)
         tlm_p = get_tlm_path(e, controls, TMIN, TMIN + t, DT, nonlin_p)
@@ -419,7 +426,7 @@ def _do_adj_id_check(
 
     # make dataframe of output and return
     data = {
-        "timesteps taken": [t for t in range(1, TMAX - TMIN + 1)],
+        "timesteps taken": [t for t in range(1, n_steps + 1)],
         "identity": id_t,
         "log(|identity - 1|)": np.log10(np.abs(np.array(id_t) - 1)),
     }
