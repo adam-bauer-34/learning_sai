@@ -50,18 +50,18 @@ global:
 
 two_region:
   ALPHA_CEN: [1.6, 1.3]  # pattern scaling
-  BETA_CEN: [-0.01812132, 0.01812132]  # sai adjustment
+  BETA_CEN: [-0.01693167, 0.01693167]  # sai adjustment
   T_REG_CEN: [0.0, 0.0]  # regional temperature initial conditions
 
   ALPHA_STD: [0.2816, 0.2288]
-  BETA_STD: [0.010648, 0.010648]
+  BETA_STD: [0.00957743, 0.00957743]
   T_REG_STD: [None, None]
 
 three_region:
   ALPHA_CEN: [1.6, 1.3, 1.275]  # pattern scaling
-  BETA_CEN: [-0.018414, 0.018414, -0.01023]  # sai adjustment
+  BETA_CEN: [-0.01734648, 0.01734648, -0.01073647]  # sai adjustment
   T_REG_CEN: [0.0, 0.0, 0.0]  # regional temperature initial conditions
 
   ALPHA_STD: [0.32, 0.26, 0.255]
-  BETA_STD: [0.0143, 0.0143, 0.0143]
+  BETA_STD: [0.01335151, 0.01335151, 0.01335151]
   T_REG_STD: [None, None, None]

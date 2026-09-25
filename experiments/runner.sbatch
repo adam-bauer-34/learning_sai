@@ -37,7 +37,7 @@ ECS=3.0
 DEG_P_DEC=0.1
 N_YRS_RAMP=50
 N_ENS=500
-TIME="2:00:00"
+TIME="4:00:00"
 REG_NOISE=false
 SAI_RAMP="linear"
 
@@ -60,7 +60,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # 1. Define the parameter array
-PARAMS=(5 11 15 21 30 35)
+PARAMS=(5 10 15 20 25 30)
 CURRENT_PARAM=${PARAMS[$SLURM_ARRAY_TASK_ID]}
 
 # --------------------------------
