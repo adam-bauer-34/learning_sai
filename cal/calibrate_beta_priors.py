@@ -25,7 +25,8 @@ function of the betas and Nelder-Mead converges cleanly.
 
 To run (from the repo root):
     python cal/calibrate_beta_priors.py [--regions two_region three_region]
-                                        [--joint_std] [--write] [--save]
+                                        [--joint_std] [--write] [--write_truth]
+                                        [--theta_truth 5 10 ...] [--save]
 
 The run ends with the summary figure from theta_prior.ipynb (theta prior CDFs vs
 Harding, beta_2 prior CDFs with the true beta_2s), drawn with the calibrated betas.
@@ -229,7 +230,9 @@ def find_true_betas(p, N_regs, beta_cen, beta_std, theta_truths=THETA_TRUTH, n_s
 
     true_betas = []
     for theta_true in theta_truths:
-        sol = root(lambda x: theta_true - angle(beta_cen[0], x[0]).ravel(), x0=beta_cen[1])
+        sol = root(
+            lambda x: theta_true - angle(beta_cen[0], x[0]).ravel(), x0=beta_cen[1]
+        )
         assert sol.success, f"no beta_2 for theta = {theta_true}: {sol.message}"
         b1, b2 = beta_cen[0], sol.x[0]
 
@@ -244,7 +247,9 @@ def find_true_betas(p, N_regs, beta_cen, beta_std, theta_truths=THETA_TRUTH, n_s
     return np.array(true_betas)
 
 
-def report_true_betas(regions, p, beta_cen, beta_std, true_betas, theta_truths=THETA_TRUTH):
+def report_true_betas(
+    regions, p, beta_cen, beta_std, true_betas, theta_truths=THETA_TRUTH
+):
     """Print the true betas and how many prior sigmas each sits from its central value."""
     N_regs = N_REGS[regions]
     print(f"  {regions} true betas (2 sigma limit on beta_2 before beta_1 moves)")
@@ -275,7 +280,7 @@ def plot_summary(priors, thetas, results, save, outdir, theta_truths=THETA_TRUTH
     b1_keys = [f"{r}_b1" for r in regions_list]
     fig = plt.figure(figsize=(7 * len(regions_list), 15))
     axd = fig.subplot_mosaic(
-        [["theta"] * len(regions_list), regions_list, b1_keys],
+        [["theta"] * len(regions_list), b1_keys, regions_list],
         gridspec_kw=dict(height_ratios=[1.2, 1, 1]),
     )
 
@@ -285,8 +290,14 @@ def plot_summary(priors, thetas, results, save, outdir, theta_truths=THETA_TRUTH
         x = np.sort(thetas[regions].sample(beta_cen, beta_std))
         cdf = np.arange(1, len(x) + 1) / len(x)
         color = REGION_COLORS[regions]
-        ax.plot(x, cdf, color=color, linestyle="solid", linewidth=2.5,
-                label=REGION_LABELS[regions])
+        ax.plot(
+            x,
+            cdf,
+            color=color,
+            linestyle="solid",
+            linewidth=2.5,
+            label=REGION_LABELS[regions],
+        )
         ax.axvline(np.median(x), color=color, linestyle="dashed", linewidth=2)
         for q in np.percentile(x, [5, 95]):
             ax.axvline(q, color=color, linestyle="dotted", linewidth=2)
@@ -299,22 +310,35 @@ def plot_summary(priors, thetas, results, save, outdir, theta_truths=THETA_TRUTH
         ax.axvline(theta_true, color=TRUTH_COLOR, linestyle="dashdot", linewidth=1.5)
 
     # dummy legend entries
-    ax.plot([], [], color="black", linestyle="solid", linewidth=2,
-            label="Harding et al. (2023)")
+    ax.plot(
+        [],
+        [],
+        color="black",
+        linestyle="solid",
+        linewidth=2,
+        label="Harding et al. (2023)",
+    )
     ax.plot([], [], color="grey", linestyle="dashed", linewidth=2, label="Median")
-    ax.plot([], [], color="grey", linestyle="dotted", linewidth=2,
-            label="5/95 Percentiles")
-    ax.plot([], [], color=TRUTH_COLOR, linestyle="dashdot", linewidth=1.5,
-            label="True values")
+    ax.plot(
+        [], [], color="grey", linestyle="dotted", linewidth=2, label="5/95 Percentiles"
+    )
+    ax.plot(
+        [],
+        [],
+        color=TRUTH_COLOR,
+        linestyle="dashdot",
+        linewidth=1.5,
+        label="True values",
+    )
 
-    ax.set_xlabel(r"$\vartheta$")
+    ax.set_xlabel(r"$\vartheta$ [°]")
     ax.set_ylabel("CDF")
     ax.legend(loc="lower right", frameon=True, facecolor="white")
     ax.set_title(r"$\vartheta$ Prior", fontweight="bold")
-    ax.set_xlim((0, 45))
+    ax.set_xlim((0, 35))
     ax.set_ylim((0, 1))
 
-    # --- lower panels: beta_2 (middle row) and beta_1 (bottom row) CDFs ---
+    # --- lower panels: beta_1 (middle row) and beta_2 (bottom row) CDFs ---
     for regions, (beta_cen, beta_std) in results.items():
         betas = thetas[regions].betas(beta_cen, beta_std)
         true_betas = find_true_betas(
@@ -326,24 +350,40 @@ def plot_summary(priors, thetas, results, save, outdir, theta_truths=THETA_TRUTH
             cdf = np.arange(1, len(b) + 1) / len(b)
             ax.plot(b, cdf, color=REGION_COLORS[regions], linewidth=3, zorder=100)
 
-            ax.axvspan((beta_cen[i] - 2 * beta_std) / PHI,
-                       (beta_cen[i] + 2 * beta_std) / PHI,
-                       color="grey", alpha=0.15, label=r"prior $\pm 2\sigma$")
+            ax.axvspan(
+                (beta_cen[i] - 2 * beta_std) / PHI,
+                (beta_cen[i] + 2 * beta_std) / PHI,
+                color="grey",
+                alpha=0.15,
+                label=r"prior $\pm 2\sigma$",
+            )
 
             for k, bt in enumerate(true_betas[:, i]):
-                ax.axvline(bt / PHI, color=TRUTH_COLOR, linestyle="dashdot", linewidth=2,
-                           label=rf"$\beta^{{\dagger}}_{{{i + 1}}}$" if k == 0 else None)
+                ax.axvline(
+                    bt / PHI,
+                    color=TRUTH_COLOR,
+                    linestyle="dashdot",
+                    linewidth=2,
+                    label=rf"$\beta^{{\dagger}}_{{{i + 1}}}$" if k == 0 else None,
+                )
 
-            ax.set_xlabel(rf"$\beta_{i + 1}$")
+            ax.set_xlabel(rf"$\beta_{i + 1}$ [K / (W/m$^2$)]")
             ax.set_ylabel("CDF")
-            ax.set_title(f"{N_REGS[regions]}-Region Case", fontweight="bold")
+            if i == 0:
+                ax.set_title(f"{N_REGS[regions]}-Region Case", fontweight="bold")
             ax.legend(loc="center left" if i == 1 else "center right")
 
     # panel letters
-    for letter, key in zip("ABCDE", ["theta", *regions_list, *b1_keys]):
-        axd[key].text(0.02, 0.98, letter, transform=axd[key].transAxes,
-                      fontweight="bold", verticalalignment="top",
-                      bbox=dict(boxstyle="round", facecolor="white", alpha=0.8))
+    for letter, key in zip("ABCDE", ["theta", *b1_keys, *regions_list]):
+        axd[key].text(
+            0.02,
+            0.98,
+            letter,
+            transform=axd[key].transAxes,
+            fontweight="bold",
+            verticalalignment="top",
+            bbox=dict(boxstyle="round", facecolor="white", alpha=0.8),
+        )
 
     plt.tight_layout()
 
@@ -356,13 +396,47 @@ def plot_summary(priors, thetas, results, save, outdir, theta_truths=THETA_TRUTH
         plt.show()
 
 
+def write_truth_yaml(path, regions, p, beta_cen, true_betas, theta_truths):
+    """Replace the theta: block of one section of the truth file with new true values.
+
+    ALPHA_TR is the prior central value; BETA_TR is [beta_1, beta_2(, beta_3)] with
+    beta_3 at its prior central value.
+    """
+    with open(path, "r") as f:
+        lines = f.readlines()
+
+    # locate the section, then its theta: block (runs to the next top-level key)
+    start = lines.index(f"{regions}:\n")
+    t0 = next(i for i in range(start + 1, len(lines)) if lines[i].rstrip() == "  theta:")
+    t1 = next(
+        (i for i in range(t0 + 1, len(lines)) if re.match(r"^\S", lines[i])), len(lines)
+    )
+
+    alpha = "[" + ", ".join(str(a) for a in p["ALPHA_CEN"]) + "]"
+    block = ["  theta:\n"]
+    for theta_true, (b1, b2) in zip(theta_truths, true_betas):
+        betas = [b1, b2] + ([beta_cen[2]] if N_REGS[regions] == 3 else [])
+        block += [
+            f"    {int(theta_true)}:\n",
+            f"      ALPHA_TR: {alpha}\n",
+            f"      BETA_TR: [{', '.join(repr(float(b)) for b in betas)}]\n",
+        ]
+    block.append("\n" if t1 < len(lines) else "")
+
+    lines[t0:t1] = block
+    with open(path, "w") as f:
+        f.writelines(lines)
+
+
 def report(label, theta_prior, beta_cen, beta_std):
     q = theta_prior.percentiles(beta_cen, beta_std)
     print(f"  {label}")
     print(f"    BETA_CEN: [{', '.join(f'{b:.8f}' for b in beta_cen)}]")
     print(f"    BETA_STD: [{', '.join(f'{beta_std:.8f}' for _ in beta_cen)}]")
     for pct, qi, hi in zip(PERCENTILES, q, HARDING):
-        print(f"    {pct:>2}th pct: {qi:7.3f}  (Harding {hi:5.1f}, diff {qi - hi:+.3f})")
+        print(
+            f"    {pct:>2}th pct: {qi:7.3f}  (Harding {hi:5.1f}, diff {qi - hi:+.3f})"
+        )
 
 
 def main():
@@ -384,8 +458,16 @@ def main():
         action="store_true",
         help="write the calibrated betas into the priors file",
     )
+    parser.add_argument("--truth", default="config/truth.yaml")
     parser.add_argument(
-        "--save", action="store_true", help="save the summary figure instead of showing it"
+        "--write_truth",
+        action="store_true",
+        help="write the true betas for --theta_truth into the truth file",
+    )
+    parser.add_argument(
+        "--save",
+        action="store_true",
+        help="save the summary figure instead of showing it",
     )
     parser.add_argument("--outdir", type=Path, default=FIGS_DIR / "cal")
     parser.add_argument(
@@ -414,7 +496,9 @@ def main():
         print(f"=== {' + '.join(group)} ===")
         print(f"initial misfit: {misfit(x0, unpack, thetas):.4f} deg^2")
         for regions, (beta_cen, beta_std) in unpack(x0).items():
-            report(f"{regions} (current priors.yaml)", thetas[regions], beta_cen, beta_std)
+            report(
+                f"{regions} (current priors.yaml)", thetas[regions], beta_cen, beta_std
+            )
 
         sol = minimize(
             misfit,
@@ -443,6 +527,12 @@ def main():
         report_true_betas(
             regions, priors[regions], beta_cen, beta_std, true_betas, args.theta_truth
         )
+        if args.write_truth:
+            write_truth_yaml(
+                args.truth, regions, priors[regions], beta_cen, true_betas, args.theta_truth
+            )
+    if args.write_truth:
+        print(f"wrote true betas to {args.truth}")
     print()
 
     plot_summary(priors, thetas, results, args.save, args.outdir, args.theta_truth)

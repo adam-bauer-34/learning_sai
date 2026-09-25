@@ -32,7 +32,7 @@ from var_assim.plotting.presets import get_presets
 from var_assim.plotting.utils import make_figure_filename
 
 MODELS = ["pco2geowc_reg", "pco2geowc_reg_noic"]
-THETAS = [5, 11, 15, 21, 30, 35]
+THETAS = [5, 10, 15, 20, 25, 30]
 X_PARAM, Y_PARAM = "ALPHA_R2", "BETA_R2"
 
 # Okabe-Ito, as mandated by presets.py

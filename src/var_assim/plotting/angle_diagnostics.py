@@ -280,6 +280,21 @@ def build_inv_covar_prior(Prior, Noise, n_times, q_offset=0):
     return inv_covar_prior, prior_stds
 
 
+def window_names(path):
+    """Window group names in ascending window order.
+
+    Read from the file rather than from `config/windowing.yaml` so a run is
+    described by its own contents, which also catches a windowing scheme that
+    has been edited since the run.
+    """
+
+    ds = nc.Dataset(path)
+    try:
+        return sorted(ds.groups, key=int)
+    finally:
+        ds.close()
+
+
 def load_window(path, window, want_data_final=False):
     """Read one window group, pulling only the slices the diagnostics need.
 
