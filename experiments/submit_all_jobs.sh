@@ -47,3 +47,13 @@ done; done; done
 for rp in fast slow; do
   $S --model pco2geowc_nn --noise_model nn $C --scenario ssp245 --deg_p_dec 0.1 --sai_ramp $rp
 done
+
+# --------------------------------
+# pco2geosc_reg_noic (strong constraint), ssp245, AR1, DEGpDEC 0.1: all three
+# ramps x both noise designs x all three covariance modes (18). Commented out so
+# running this script still submits exactly the 32 jobs above; uncomment to add.
+# --------------------------------
+# RS="--model pco2geosc_reg_noic --reg_noise"
+# for rp in linear fast slow; do for nz in flux temp; do for cv in marginal profile fixed; do
+#   $S $RS $C --scenario ssp245 --noise_model AR1 --deg_p_dec 0.1 --sai_ramp $rp --sc_noise $nz --sc_covar $cv
+# done; done; done

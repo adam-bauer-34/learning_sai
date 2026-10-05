@@ -16,6 +16,12 @@ N_ENS=500
 TIME="4:00:00"
 REG_NOISE=false
 SAI_RAMP="linear"
+# strong-constraint model only (pco2geosc_reg_noic); empty = model default
+SC_NOISE=""
+SC_COVAR=""
+SC_OBS_PERT=""
+# ScenarioMIP7 scenarios only (*-ext); empty = default (median)
+CONC_STAT=""
 
 # --------------------------------
 # Parse arguments
@@ -34,6 +40,10 @@ while [[ $# -gt 0 ]]; do
         --time)         TIME="$2";         shift 2 ;;
         --reg_noise)    REG_NOISE=true;    shift ;;
         --sai_ramp)     SAI_RAMP="$2";     shift 2 ;;
+        --sc_noise)     SC_NOISE="$2";     shift 2 ;;
+        --sc_covar)     SC_COVAR="$2";     shift 2 ;;
+        --sc_obs_pert)  SC_OBS_PERT="$2";  shift 2 ;;
+        --conc_stat)    CONC_STAT="$2";    shift 2 ;;
         *) echo "Unknown argument: $1" >&2; exit 1 ;;
     esac
 done
@@ -54,11 +64,20 @@ fi
 # --------------------------------
 OPTIONAL_FLAGS=""                                         
 [[ "$REG_NOISE" == true ]] && OPTIONAL_FLAGS="--reg_noise"
+[[ -n "$SC_NOISE" ]]    && OPTIONAL_FLAGS+=" --sc_noise $SC_NOISE"
+[[ -n "$SC_COVAR" ]]    && OPTIONAL_FLAGS+=" --sc_covar $SC_COVAR"
+[[ -n "$SC_OBS_PERT" ]] && OPTIONAL_FLAGS+=" --sc_obs_pert $SC_OBS_PERT"
+[[ -n "$CONC_STAT" ]]   && OPTIONAL_FLAGS+=" --conc_stat $CONC_STAT"
 
 # --------------------------------
 # Build job name from all params
 # --------------------------------
 JOB_NAME="${SCENARIO}-${MODEL}-${NOISE_MODEL}-${WINDOWING}-ecs${ECS}-dpdec${DEG_P_DEC}-ens${N_ENS}-ramp${SAI_RAMP}"
+# strong-constraint variants would otherwise share a job name (and log files)
+if [[ -n "$SC_NOISE$SC_COVAR$SC_OBS_PERT" ]]; then
+    JOB_NAME+="-sc${SC_NOISE:-dflt}-${SC_COVAR:-dflt}-${SC_OBS_PERT:-dflt}"
+fi
+[[ -n "$CONC_STAT" ]] && JOB_NAME+="-co2${CONC_STAT}"
 mkdir -p logs
 
 # --------------------------------
