@@ -41,6 +41,8 @@ def main():
     logger.info(f"    > Model equations: {args.model}")
     logger.info(f"    > Windowing config: {args.windowing}")
     logger.info(f"    > Socio-economic pathway: {args.scenario}")
+    if hasattr(args, "conc_stat"):
+        logger.info(f"    > ScenarioMIP7 CO2 concentration statistic: {args.conc_stat}")
     logger.info(f"    > Initial assimilation year: {args.tmin}")
     logger.info(f"    > Noise model for internal variability: {args.noise_model}")
     logger.info(f"    > True value of SAI angle parameter: {args.theta}")

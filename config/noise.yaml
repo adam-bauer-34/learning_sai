@@ -78,3 +78,21 @@ obs_weighting:
   pco2geowc_reg_noic:  # same weighting as pco2geowc_reg, so the two are comparable
     OBS_T1_STD: 0.1
     OBS_T2_STD: 0.2
+  pco2geosc_reg_noic:  # strong-constraint counterpart; same weighting as pco2geowc_reg_noic, so the two are comparable
+    OBS_T1_STD: 0.1
+    OBS_T2_STD: 0.2
+
+# Strong-constraint model (pco2geosc_reg_noic). Internal variability is not a
+# control variable there: its effect on the observables goes into the
+# observation-error covariance instead. With --sc_noise temp it enters T1
+# directly in temperature units,
+#
+#   T1 <- T1 + dt/C1 (F - lambda T1 + gamma eps (T2 - T1)) + eps_T,
+#
+# rather than as the heat-flux kick dt/C1 * q of --sc_noise flux, which uses
+# INT_VAR_STD above. T1_NOISE_STD is the AR(1) innovation std of eps_T, in K;
+# the autocorrelation is the selected noise_model's AUTO_CORR. It lives in its
+# own block because ClimateModelNoise splats the noise_model block into a
+# dataclass, so a new key there would break every other model.
+strong_constraint:
+  T1_NOISE_STD: 0.09  # K, Proistosescu and Huybers (2017)

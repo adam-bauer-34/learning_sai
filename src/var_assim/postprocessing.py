@@ -143,6 +143,18 @@ def make_master_datatree(
 
     # save model output if desired
     if args.save_output:
+        # the strong-constraint model has three extra settings; without them in
+        # the name, its variants would overwrite each other. only that model's
+        # namespace has these attributes, so every other filename is unchanged
+        sc_tag = (
+            f"_sc-{args.sc_noise}-{args.sc_covar}-{args.sc_obs_pert}"
+            if hasattr(args, "sc_noise")
+            else ""
+        )
+        # likewise, only ScenarioMIP7 runs carry conc_stat; tag it so mean and
+        # median runs don't overwrite each other
+        conc_tag = f"_CO2{args.conc_stat}" if hasattr(args, "conc_stat") else ""
+
         if not args.reg_noise:
             path = (
                 DATA_DIR
@@ -151,7 +163,7 @@ def make_master_datatree(
                 / (
                     f"var-assim-output_{args.scenario}_{args.model}_{args.windowing}_{args.noise_model}"
                     f"_TMIN{args.tmin}_THETA{args.theta}_ECS{args.ecs}"
-                    f"_ramprate{args.sai_ramp}_DEGpDEC{args.deg_p_dec}_NYRSRAMP{args.n_yrs_ramp}_Nens{args.n_ens}.nc"
+                    f"_ramprate{args.sai_ramp}_DEGpDEC{args.deg_p_dec}_NYRSRAMP{args.n_yrs_ramp}_Nens{args.n_ens}{sc_tag}{conc_tag}.nc"
                 )
             )
 
@@ -163,7 +175,7 @@ def make_master_datatree(
                 / (
                     f"var-assim-output_{args.scenario}_{args.model}_{args.windowing}_{args.noise_model}+reg"
                     f"_TMIN{args.tmin}_THETA{args.theta}_ECS{args.ecs}"
-                    f"_ramprate{args.sai_ramp}_DEGpDEC{args.deg_p_dec}_NYRSRAMP{args.n_yrs_ramp}_Nens{args.n_ens}.nc"
+                    f"_ramprate{args.sai_ramp}_DEGpDEC{args.deg_p_dec}_NYRSRAMP{args.n_yrs_ramp}_Nens{args.n_ens}{sc_tag}{conc_tag}.nc"
                 )
             )
 

@@ -40,6 +40,12 @@ N_ENS=500
 TIME="4:00:00"
 REG_NOISE=false
 SAI_RAMP="linear"
+# strong-constraint model only (pco2geosc_reg_noic); empty = model default
+SC_NOISE=""
+SC_COVAR=""
+SC_OBS_PERT=""
+# ScenarioMIP7 scenarios only (*-ext); empty = default (median)
+CONC_STAT=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -55,6 +61,10 @@ while [[ $# -gt 0 ]]; do
         --time)         TIME="$2";         shift 2 ;;
         --reg_noise)    REG_NOISE=true;    shift ;;
         --sai_ramp)     SAI_RAMP="$2";     shift 2 ;;
+        --sc_noise)     SC_NOISE="$2";     shift 2 ;;
+        --sc_covar)     SC_COVAR="$2";     shift 2 ;;
+        --sc_obs_pert)  SC_OBS_PERT="$2";  shift 2 ;;
+        --conc_stat)    CONC_STAT="$2";    shift 2 ;;
         *) echo "Unknown argument: $1" >&2; exit 1 ;;
     esac
 done
@@ -89,6 +99,8 @@ echo " n_yrs_ramp      : $N_YRS_RAMP"
 echo " n_ens           : $N_ENS"
 echo " reg_noise       : $REG_NOISE"
 echo " sai_ramp        : $SAI_RAMP"
+[[ -n "$SC_NOISE$SC_COVAR$SC_OBS_PERT" ]] && echo " sc (noise/covar/pert): ${SC_NOISE:-dflt} / ${SC_COVAR:-dflt} / ${SC_OBS_PERT:-dflt}"
+[[ -n "$CONC_STAT" ]] && echo " conc_stat       : $CONC_STAT"
 echo "======================================"
 echo ""
 
@@ -107,6 +119,10 @@ echo "Starting Array Task $SLURM_ARRAY_TASK_ID with Param $CURRENT_PARAM"
 # Build optional flags, then pass to var-assim
 OPTIONAL_FLAGS=""                                            
 [[ "$REG_NOISE" == true ]] && OPTIONAL_FLAGS="--reg_noise" 
+[[ -n "$SC_NOISE" ]]    && OPTIONAL_FLAGS+=" --sc_noise $SC_NOISE"
+[[ -n "$SC_COVAR" ]]    && OPTIONAL_FLAGS+=" --sc_covar $SC_COVAR"
+[[ -n "$SC_OBS_PERT" ]] && OPTIONAL_FLAGS+=" --sc_obs_pert $SC_OBS_PERT"
+[[ -n "$CONC_STAT" ]]   && OPTIONAL_FLAGS+=" --conc_stat $CONC_STAT"
 
 var-assim \
     --model        "$MODEL"       \

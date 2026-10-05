@@ -10,7 +10,7 @@ import pooch
 import numpy as np
 import pandas as pd
 
-from var_assim.config import DATA_DIR_ABS
+from var_assim.config import DATA_DIR_ABS, SMIP7_SCENARIOS, SMIP7_CONC_STATS
 from logging import Logger
 from argparse import Namespace
 
@@ -70,19 +70,46 @@ class EmissionsBaseline:
         self.times = np.arange(self.t_min, self.t_max, 1)  # time range
         self.times_ext = np.arange(self.t_min, self.t_max + 1, 1)  # time range extended
 
-        # step 1: import .csv containing emissions data
-        self._import_emissions_timeseries()
+        # RCMIP (ssp*) has emissions and concentrations for several species;
+        # ScenarioMIP7 (*-ext) has CO2 concentrations only
+        self.dataset = "smip7" if self.scenario in SMIP7_SCENARIOS else "rcmip"
 
-        # step 1a: check if i passed a valid scenario
-        if np.all(self.scenario != self.df_emis["Scenario"].unique()):
-            raise ValueError(
-                "Invalid scenario. Valid scenarios are:\n{}.".format(
-                    self.df_emis["Scenario"].unique()
+        if self.dataset == "rcmip":
+            # step 1: import .csv containing emissions data
+            self._import_emissions_timeseries()
+
+            # step 1a: check if i passed a valid scenario
+            if np.all(self.scenario != self.df_emis["Scenario"].unique()):
+                raise ValueError(
+                    "Invalid scenario. Valid scenarios are:\n{}.".format(
+                        self.df_emis["Scenario"].unique()
+                    )
                 )
-            )
 
-        # step 2: parse the big dataframe into individual gas time series
-        self._parse_species()
+            # step 2: parse the big dataframe into individual gas time series
+            self._parse_species()
+
+        else:
+            # callers that build their own Namespace (checks, analysis scripts)
+            # may not carry conc_stat, so fall back to the CLI default
+            self.conc_stat = getattr(args, "conc_stat", "median")
+            if self.conc_stat not in SMIP7_CONC_STATS:
+                raise ValueError(
+                    f"Invalid conc_stat {self.conc_stat}. Valid choices are: {SMIP7_CONC_STATS}."
+                )
+
+            # step 1: import .csv containing CO2 concentration paths
+            self._import_smip7_timeseries()
+
+            # step 2: pull this scenario's CO2 path
+            self._parse_smip7_species()
+
+        # label for print statements below
+        scenario_label = (
+            self.scenario
+            if self.dataset == "rcmip"
+            else f"{self.scenario} (ScenarioMIP7, {self.conc_stat})"
+        )
 
         # step 3: if we care about geoengineering, include those emissions
         if self.geo:
@@ -93,15 +120,15 @@ class EmissionsBaseline:
             self.forcing["geo"] = np.zeros_like(self.times_ext)  # no geo
 
         if print_level == 1:
-            self.logger.info(f"    > Emissions baseline for {self.scenario} created")
+            self.logger.info(f"    > Emissions baseline for {scenario_label} created")
 
         elif print_level == 2:
             self.logger.info(
-                f"        >> Emissions baseline for {self.scenario} created"
+                f"        >> Emissions baseline for {scenario_label} created"
             )
 
         else:
-            self.logger.info(f"Emissions baseline for {self.scenario} created")
+            self.logger.info(f"Emissions baseline for {scenario_label} created")
 
     def _import_emissions_timeseries(self):
         """Import time series of emissions for each gas species."""
@@ -270,6 +297,43 @@ class EmissionsBaseline:
 
             # save to dictionary of species
             self.conc[tmp_spec_trunc] = tmp_df_vals
+
+    def _import_smip7_timeseries(self):
+        """Import ScenarioMIP7 CO2 concentration pathways."""
+
+        # no archived copy to fetch from, so a missing file raises FileNotFoundError
+        CONC_DATA_PATH = DATA_DIR_ABS / "input" / "scenariomip7_conc_paths.csv"
+        self.df_conc = pd.read_csv(CONC_DATA_PATH)
+
+    def _parse_smip7_species(self):
+        """Pull this scenario's CO2 concentration path between t_min and t_max."""
+
+        # only CO2 concentrations exist for ScenarioMIP7. the RCMIP-only species
+        # are left out so any model that needs them fails loudly
+        self.emis = {}
+        self.ref_emis = {}
+        self.conc = {}
+        self.forcing = {}  # only filled in when self.geo = True above
+
+        tmp_df = self.df_conc.loc[
+            self.df_conc["scenario_ext"] == self.scenario
+        ].set_index("year")
+
+        # data are annual, so select the years directly (no interpolation).
+        # t_min and t_max are whatever the caller passed -- never replaced by
+        # the file's first year -- and t_max is inclusive, matching the length
+        # of the RCMIP slice
+        missing = self.times_ext[~np.isin(self.times_ext, tmp_df.index)]
+        if missing.size:
+            raise ValueError(
+                f"ScenarioMIP7 scenario {self.scenario} has no data for "
+                f"{missing.min()}-{missing.max()}; it covers "
+                f"{tmp_df.index.min()}-{tmp_df.index.max()}."
+            )
+
+        self.conc["CO2"] = tmp_df.loc[self.times_ext, self.conc_stat].to_numpy(
+            dtype=float
+        )
 
     def _make_geo_time_series(self):
         # add sulfur emissions from geoengineering
