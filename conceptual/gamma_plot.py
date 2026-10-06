@@ -16,8 +16,8 @@ DEFAULT_COLUMNS = [
     (3.0, r"Slow ramp-up of SAI ($f^{\mathrm{SAI}}_t \propto t^{3}$)"),
 ]
 DEFAULT_ROWS = [
-    ("se_co2", r"$\Gamma^r_{\mathrm{CO_2}}$"),
-    ("se_sai", r"$\Gamma^r_{\mathrm{SAI}}$"),
+    ("se_co2", r"Standard error in $\Gamma^r_{\mathrm{CO_2}}$"),
+    ("se_sai", r"Standard error in $\Gamma^r_{\mathrm{SAI}}$"),
     ("se_co2_rel", r"$\Gamma^r_{\mathrm{CO_2}}$ (relative to 2030)"),
     ("se_sai_rel", r"$\Gamma^r_{\mathrm{SAI}}$ (relative to 2030)"),
 ]
